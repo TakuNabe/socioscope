@@ -32,6 +32,7 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | script | report | 内容 |
 |---|---|---|
 | `analysis/a20261004_h1_income_tfr.py` | `reports/2026-10-04-h1-income-tfr.md`（＋ `.stdout.txt`、`figures/h1_*.png`） | H1: ln GDP pc × TFR の記述統計・プール OLS・二元 FE（国クラスタ SE）・高所得域の J 字検定・頑健性 |
+| `analysis/a20261004_h3_jp_income_class.py` | `reports/2026-10-04-h3-jp-income-class.md`（＋ `.stdout.txt`、`figures/h3_*.png`） | H3: 日本の所得階級 × 男性有配偶率・児童世帯割合の勾配（階級単位の加重 OLS・Spearman・波間交互作用）と、国間 ln GDP pc × TFR 勾配との符号比較（レベル間比較、記述のみ） |
 
 ## 規約
 - World Bank の集計地域（World, North America=`NAC`, 所得グループ等）は indicator エンドポイントで `iso3` が 3 文字のまま返ることがある。fetch で `/v2/country` メタデータ（`countries.json`）も取得し、stage 段階で `region.id == "NA"` の経済を除外する（`worldbank.country_set` → `rows_from_response(countries=...)`）。`countries.json` が無いと stage は何も書かない（fail-closed）。

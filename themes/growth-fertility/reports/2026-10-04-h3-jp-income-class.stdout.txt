@@ -1,0 +1,188 @@
+== mart jp_income_class_fertility ==
+rows=2400 source=['estat_kiso'] survey=['国民生活基礎調査']
+  children_household_share       sex=None   rows= 130 years=2012-2024 classes=26 null_values=0
+  children_household_share_pct   sex=None   rows=1000 years=1985-2024 classes=25 null_values=25
+  household_share_pct            sex=None   rows=1000 years=1985-2024 classes=25 null_values=25
+  married_share                  sex=female rows=  90 years=2012-2024 classes=18 null_values=0
+  married_share                  sex=male   rows=  90 years=2012-2024 classes=18 null_values=0
+  married_share                  sex=total  rows=  90 years=2012-2024 classes=18 null_values=0
+  years with null values (survey cancelled): [2019]
+== analysis bands (bounded classes only; open top = lower x 1.25) ==
+  male married_share: 80 rows, 16 bands x 5 waves
+  female married_share: 80 rows
+  children_household_share: 125 rows, 25 bands x 5 waves
+
+== (a) male married_share: pre-specified main estimand ==
+-- [A] male, weighted (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=16 slope +0.1764 (se 0.0176) [+0.1387, +0.2142] sign=positive spearman=+0.997
+  income year 2015: n_bands=16 slope +0.1901 (se 0.0159) [+0.1560, +0.2242] sign=positive spearman=+1.000
+  income year 2018: n_bands=16 slope +0.1852 (se 0.0163) [+0.1502, +0.2203] sign=positive spearman=+0.991
+  income year 2021: n_bands=16 slope +0.1941 (se 0.0154) [+0.1612, +0.2271] sign=positive spearman=+0.991
+  income year 2024: n_bands=16 slope +0.1970 (se 0.0173) [+0.1599, +0.2341] sign=positive spearman=+0.979
+-- married_share (male), excluded classes, reported separately --
+  income year 2012: none  share=0.2631 weight=2117
+  income year 2012: total share=0.7149 weight=27305
+  income year 2015: none  share=0.3348 weight=2724
+  income year 2015: total share=0.6990 weight=28114
+  income year 2018: none  share=0.3414 weight=2739
+  income year 2018: total share=0.6911 weight=28519
+  income year 2021: none  share=0.3539 weight=2436
+  income year 2021: total share=0.6749 weight=27987
+  income year 2024: none  share=0.3586 weight=2596
+  income year 2024: total share=0.6562 weight=28800
+
+== (b) female married_share (reported, confounded with labour-force participation) ==
+-- [B] female, weighted (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=16 slope -0.0912 (se 0.0294) [-0.1543, -0.0281] sign=negative spearman=+0.009
+  income year 2015: n_bands=16 slope -0.0795 (se 0.0300) [-0.1439, -0.0151] sign=negative spearman=+0.009
+  income year 2018: n_bands=16 slope -0.0779 (se 0.0305) [-0.1434, -0.0125] sign=negative spearman=-0.076
+  income year 2021: n_bands=16 slope -0.0749 (se 0.0293) [-0.1378, -0.0121] sign=negative spearman=+0.085
+  income year 2024: n_bands=16 slope -0.0880 (se 0.0241) [-0.1396, -0.0363] sign=negative spearman=-0.274
+-- married_share (female), excluded classes, reported separately --
+  income year 2012: none  share=0.5716 weight=3401
+  income year 2012: total share=0.6164 weight=21688
+  income year 2015: none  share=0.5857 weight=3751
+  income year 2015: total share=0.6309 weight=22276
+  income year 2018: none  share=0.5961 weight=3501
+  income year 2018: total share=0.6286 weight=23329
+  income year 2021: none  share=0.6204 weight=3438
+  income year 2021: total share=0.6089 weight=23642
+  income year 2024: none  share=0.6406 weight=4229
+  income year 2024: total share=0.5892 weight=25119
+
+== (c) children_household_share by household income band ==
+-- [C] households with children, weighted (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=25 slope +0.1282 (se 0.0159) [+0.0953, +0.1612] sign=positive spearman=+0.712
+  income year 2015: n_bands=25 slope +0.1342 (se 0.0173) [+0.0983, +0.1700] sign=positive spearman=+0.718
+  income year 2018: n_bands=25 slope +0.1296 (se 0.0163) [+0.0959, +0.1633] sign=positive spearman=+0.786
+  income year 2021: n_bands=25 slope +0.1229 (se 0.0139) [+0.0941, +0.1517] sign=positive spearman=+0.891
+  income year 2024: n_bands=25 slope +0.1155 (se 0.0131) [+0.0885, +0.1426] sign=positive spearman=+0.911
+
+== (d) trend across waves: pooled WLS with wave interaction (wave_c = (year-2018)/3) ==
+-- [D-a] male married_share: n=80 r2=0.9032 --
+  intercept      -0.4063 (se 0.0433) [-0.4925, -0.3200]
+  ln_mid         +0.1883 (se 0.0072) [+0.1740, +0.2026]
+  wave_c         -0.0496 (se 0.0305) [-0.1103, +0.0111]
+  ln_mid:wave_c  +0.0042 (se 0.0050) [-0.0059, +0.0142]
+-- [D-b] female married_share: n=80 r2=0.3826 --
+  intercept      +1.0485 (se 0.0659) [+0.9172, +1.1797]
+  ln_mid         -0.0826 (se 0.0125) [-0.1074, -0.0577]
+  wave_c         -0.0076 (se 0.0465) [-0.1003, +0.0850]
+  ln_mid:wave_c  +0.0001 (se 0.0088) [-0.0174, +0.0175]
+-- [D-c] children_household_share: n=125 r2=0.7674 --
+  intercept      -0.5528 (se 0.0408) [-0.6336, -0.4720]
+  ln_mid         +0.1261 (se 0.0067) [+0.1128, +0.1394]
+  wave_c         -0.0068 (se 0.0290) [-0.0642, +0.0506]
+  ln_mid:wave_c  -0.0037 (se 0.0048) [-0.0132, +0.0057]
+
+== (e) between-country: tfr ~ ln_gdp, 2012-2024 (SE clustered by iso3) ==
+  pooled OLS: n=2580 countries=199 slope -0.9317 (se 0.0509) [-1.0315, -0.8320] sign=negative
+  cross-section slope by income year of each JP wave (classical OLS SE):
+    2012: n=198 slope -0.9911 (se 0.0558) [-1.1011, -0.8811] sign=negative
+    2015: n=199 slope -0.9608 (se 0.0521) [-1.0636, -0.8580] sign=negative
+    2018: n=199 slope -0.9327 (se 0.0479) [-1.0271, -0.8384] sign=negative
+    2021: n=199 slope -0.8797 (se 0.0458) [-0.9701, -0.7894] sign=negative
+    2024: n=195 slope -0.8640 (se 0.0424) [-0.9477, -0.7803] sign=negative
+
+== sign table (directions only; levels and outcomes differ, magnitudes not comparable) ==
+  wave   between: TFR~lnGDP             within JP male married         within JP children hh          verdict(male)
+  2012   negative                       positive                       positive                       opposite
+  2015   negative                       positive                       positive                       opposite
+  2018   negative                       positive                       positive                       opposite
+  2021   negative                       positive                       positive                       opposite
+  2024   negative                       positive                       positive                       opposite
+  pooled 2012-2024: between negative vs within-JP male (5 waves pooled, no wave term) +0.1844 (se 0.0088) [+0.1669, +0.2020] positive -> opposite
+
+== robustness (pre-listed; all shown) ==
+-- [R] male, top-code x1.1 (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=16 slope +0.1791 (se 0.0178) [+0.1409, +0.2172] sign=positive spearman=+0.997
+  income year 2015: n_bands=16 slope +0.1937 (se 0.0159) [+0.1595, +0.2278] sign=positive spearman=+1.000
+  income year 2018: n_bands=16 slope +0.1887 (se 0.0164) [+0.1535, +0.2240] sign=positive spearman=+0.991
+  income year 2021: n_bands=16 slope +0.1980 (se 0.0156) [+0.1645, +0.2315] sign=positive spearman=+0.991
+  income year 2024: n_bands=16 slope +0.2014 (se 0.0181) [+0.1627, +0.2402] sign=positive spearman=+0.979
+-- [R] children hh, top-code x1.1 (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=25 slope +0.1291 (se 0.0158) [+0.0964, +0.1618] sign=positive spearman=+0.712
+  income year 2015: n_bands=25 slope +0.1353 (se 0.0172) [+0.0997, +0.1709] sign=positive spearman=+0.718
+  income year 2018: n_bands=25 slope +0.1305 (se 0.0162) [+0.0970, +0.1640] sign=positive spearman=+0.786
+  income year 2021: n_bands=25 slope +0.1237 (se 0.0139) [+0.0950, +0.1525] sign=positive spearman=+0.891
+  income year 2024: n_bands=25 slope +0.1162 (se 0.0131) [+0.0891, +0.1433] sign=positive spearman=+0.911
+-- [R] male, top-code x1.5 (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=16 slope +0.1721 (se 0.0176) [+0.1344, +0.2097] sign=positive spearman=+0.997
+  income year 2015: n_bands=16 slope +0.1842 (se 0.0162) [+0.1495, +0.2189] sign=positive spearman=+1.000
+  income year 2018: n_bands=16 slope +0.1795 (se 0.0165) [+0.1440, +0.2149] sign=positive spearman=+0.991
+  income year 2021: n_bands=16 slope +0.1877 (se 0.0155) [+0.1546, +0.2209] sign=positive spearman=+0.991
+  income year 2024: n_bands=16 slope +0.1896 (se 0.0167) [+0.1537, +0.2255] sign=positive spearman=+0.979
+-- [R] children hh, top-code x1.5 (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=25 slope +0.1269 (se 0.0161) [+0.0937, +0.1602] sign=positive spearman=+0.712
+  income year 2015: n_bands=25 slope +0.1324 (se 0.0175) [+0.0962, +0.1686] sign=positive spearman=+0.718
+  income year 2018: n_bands=25 slope +0.1282 (se 0.0164) [+0.0943, +0.1621] sign=positive spearman=+0.786
+  income year 2021: n_bands=25 slope +0.1216 (se 0.0140) [+0.0926, +0.1506] sign=positive spearman=+0.891
+  income year 2024: n_bands=25 slope +0.1144 (se 0.0131) [+0.0874, +0.1414] sign=positive spearman=+0.911
+-- [R] male, unweighted (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=16 slope +0.1538 (se 0.0167) [+0.1180, +0.1896] sign=positive spearman=+0.997
+  income year 2015: n_bands=16 slope +0.1689 (se 0.0132) [+0.1406, +0.1973] sign=positive spearman=+1.000
+  income year 2018: n_bands=16 slope +0.1634 (se 0.0140) [+0.1334, +0.1935] sign=positive spearman=+0.991
+  income year 2021: n_bands=16 slope +0.1773 (se 0.0130) [+0.1494, +0.2053] sign=positive spearman=+0.991
+  income year 2024: n_bands=16 slope +0.1657 (se 0.0162) [+0.1308, +0.2005] sign=positive spearman=+0.979
+-- [R] female, unweighted (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=16 slope -0.0226 (se 0.0259) [-0.0782, +0.0330] sign=indistinguishable from 0 spearman=+0.009
+  income year 2015: n_bands=16 slope -0.0188 (se 0.0235) [-0.0693, +0.0317] sign=indistinguishable from 0 spearman=+0.009
+  income year 2018: n_bands=16 slope -0.0233 (se 0.0273) [-0.0819, +0.0352] sign=indistinguishable from 0 spearman=-0.076
+  income year 2021: n_bands=16 slope -0.0108 (se 0.0244) [-0.0632, +0.0416] sign=indistinguishable from 0 spearman=+0.085
+  income year 2024: n_bands=16 slope -0.0460 (se 0.0180) [-0.0846, -0.0073] sign=negative spearman=-0.274
+-- [R] children hh, unweighted (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=25 slope +0.1025 (se 0.0155) [+0.0704, +0.1346] sign=positive spearman=+0.712
+  income year 2015: n_bands=25 slope +0.1054 (se 0.0165) [+0.0713, +0.1395] sign=positive spearman=+0.718
+  income year 2018: n_bands=25 slope +0.1059 (se 0.0149) [+0.0750, +0.1367] sign=positive spearman=+0.786
+  income year 2021: n_bands=25 slope +0.1037 (se 0.0132) [+0.0765, +0.1309] sign=positive spearman=+0.891
+  income year 2024: n_bands=25 slope +0.0995 (se 0.0120) [+0.0746, +0.1244] sign=positive spearman=+0.911
+-- [R] male, excluding 0-50 band (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=15 slope +0.2106 (se 0.0127) [+0.1831, +0.2381] sign=positive spearman=+1.000
+  income year 2015: n_bands=15 slope +0.2074 (se 0.0160) [+0.1729, +0.2419] sign=positive spearman=+1.000
+  income year 2018: n_bands=15 slope +0.2051 (se 0.0159) [+0.1708, +0.2394] sign=positive spearman=+0.989
+  income year 2021: n_bands=15 slope +0.2112 (se 0.0158) [+0.1770, +0.2453] sign=positive spearman=+0.989
+  income year 2024: n_bands=15 slope +0.2155 (se 0.0160) [+0.1808, +0.2501] sign=positive spearman=+0.979
+-- [R] female, excluding 0-50 band (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=15 slope -0.1090 (se 0.0378) [-0.1906, -0.0274] sign=negative spearman=+0.221
+  income year 2015: n_bands=15 slope -0.1019 (se 0.0371) [-0.1821, -0.0217] sign=negative spearman=+0.168
+  income year 2018: n_bands=15 slope -0.1100 (se 0.0360) [-0.1876, -0.0323] sign=negative spearman=-0.021
+  income year 2021: n_bands=15 slope -0.1031 (se 0.0340) [-0.1766, -0.0296] sign=negative spearman=+0.114
+  income year 2024: n_bands=15 slope -0.1092 (se 0.0272) [-0.1681, -0.0503] sign=negative spearman=-0.129
+-- [R] children hh, excluding 0-50 band (slope of share on ln(midpoint 万円); bands as units; 95% t CI) --
+  income year 2012: n_bands=24 slope +0.1353 (se 0.0171) [+0.0997, +0.1708] sign=positive spearman=+0.674
+  income year 2015: n_bands=24 slope +0.1412 (se 0.0182) [+0.1034, +0.1790] sign=positive spearman=+0.682
+  income year 2018: n_bands=24 slope +0.1396 (se 0.0169) [+0.1045, +0.1746] sign=positive spearman=+0.758
+  income year 2021: n_bands=24 slope +0.1323 (se 0.0142) [+0.1029, +0.1617] sign=positive spearman=+0.877
+  income year 2024: n_bands=24 slope +0.1211 (se 0.0133) [+0.0935, +0.1487] sign=positive spearman=+0.899
+-- [R] male, post-COVID waves only (2021, 2024), wave interaction: n=32 r2=0.9113 --
+  intercept      -0.4074 (se 0.2212) [-0.8605, +0.0457]
+  ln_mid         +0.1912 (se 0.0364) [+0.1166, +0.2658]
+  wave_c         -0.0539 (se 0.1409) [-0.3425, +0.2348]
+  ln_mid:wave_c  +0.0029 (se 0.0231) [-0.0444, +0.0502]
+-- [R] children hh, post-COVID waves only, wave interaction: n=50 r2=0.7741 --
+  intercept      -0.5792 (se 0.1821) [-0.9457, -0.2128]
+  ln_mid         +0.1303 (se 0.0301) [+0.0698, +0.1908]
+  wave_c         +0.0143 (se 0.1162) [-0.2196, +0.2481]
+  ln_mid:wave_c  -0.0074 (se 0.0191) [-0.0459, +0.0311]
+-- [R-D] male, unweighted wave interaction: n=80 r2=0.9024 --
+  intercept      -0.2643 (se 0.0375) [-0.3391, -0.1896]
+  ln_mid         +0.1658 (se 0.0064) [+0.1531, +0.1786]
+  wave_c         -0.0426 (se 0.0265) [-0.0955, +0.0102]
+  ln_mid:wave_c  +0.0032 (se 0.0045) [-0.0058, +0.0122]
+-- [R-D] children hh, unweighted wave interaction: n=125 r2=0.7121 --
+  intercept      -0.4009 (se 0.0399) [-0.4799, -0.3219]
+  ln_mid         +0.1034 (se 0.0064) [+0.0908, +0.1160]
+  wave_c         -0.0216 (se 0.0282) [-0.0775, +0.0342]
+  ln_mid:wave_c  -0.0008 (se 0.0045) [-0.0097, +0.0081]
+
+== EXPLORATORY (not pre-registered): children-household / all-household distribution ratio ==
+  income year 1985: n_bands=25 spearman(ln_mid, ratio)=+0.229
+  income year 1990: n_bands=25 spearman(ln_mid, ratio)=+0.481
+  income year 1995: n_bands=25 spearman(ln_mid, ratio)=+0.542
+  income year 2000: n_bands=25 spearman(ln_mid, ratio)=+0.628
+  income year 2005: n_bands=25 spearman(ln_mid, ratio)=+0.682
+  income year 2010: n_bands=25 spearman(ln_mid, ratio)=+0.654
+  income year 2015: n_bands=25 spearman(ln_mid, ratio)=+0.705
+  income year 2018: n_bands=25 spearman(ln_mid, ratio)=+0.779
+  income year 2021: n_bands=25 spearman(ln_mid, ratio)=+0.892
+  income year 2024: n_bands=25 spearman(ln_mid, ratio)=+0.917
