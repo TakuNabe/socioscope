@@ -23,6 +23,12 @@ class Context:
     raw: RawStore
     tables: TableStore
     structurer: Structurer | None = None
+    # Optional source filter (`socioscope run <theme> <stage> --only <source>`). None = all.
+    sources: frozenset[str] | None = None
+
+    def wants(self, source: str) -> bool:
+        """True when a stage should touch *source* (raw-store `source` name) under the filter."""
+        return self.sources is None or source in self.sources
 
 
 StageFn = Callable[[Context], "StageResult"]

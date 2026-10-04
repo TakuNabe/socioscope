@@ -41,3 +41,15 @@ def test_double_registration_is_an_error() -> None:
         @p.register(Stage.FETCH)
         def b(ctx: Context) -> StageResult:
             return StageResult(stage=Stage.FETCH)
+
+
+def test_context_wants_every_source_by_default_and_only_listed_ones_when_filtered() -> None:
+    ctx = make_ctx()
+    assert ctx.wants("wid_world") and ctx.wants("oecd")
+    only = Context(
+        fetcher=FakeFetcher(),
+        raw=InMemoryRawStore(),
+        tables=InMemoryTableStore(),
+        sources=frozenset({"oecd"}),
+    )
+    assert only.wants("oecd") and not only.wants("wid_world")
