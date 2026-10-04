@@ -15,7 +15,7 @@
 - 日本国内: 所得階層別の有配偶率・子ども数（国民生活基礎調査・出生動向基本調査の公表集計表）
 
 ## データ候補
-World Bank WDI（**実装済み**: `SP.DYN.TFRT.IN`, `NY.GDP.PCAP.PP.KD`, `NY.GDP.MKTP.KD.ZG`）、UN WPP、OECD、日本: e-Stat・社人研（`design/data-sources.md`）。
+World Bank WDI（**実装済み**: `SP.DYN.TFRT.IN`, `NY.GDP.PCAP.PP.KD`, `NY.GDP.MKTP.KD.ZG`、サンプル絞り込み用に `SP.POP.TOTL`、集計地域除外用に `/v2/country` メタデータ）、UN WPP、OECD、日本: e-Stat・社人研（`design/data-sources.md`）。
 
 ## 分析の段階
 1. 記述: 国×年パネルの散布図（所得×TFR）を年代別に。

@@ -1,5 +1,6 @@
-[{"page":1,"pages":1,"per_page":20000,"total":4,"sourceid":"2","lastupdated":"2026-01-01"},
+[{"page":1,"pages":1,"per_page":20000,"total":5,"sourceid":"2","lastupdated":"2026-01-01"},
  [{"indicator":{"id":"SP.DYN.TFRT.IN","value":"Fertility rate, total (births per woman)"},"country":{"id":"JP","value":"Japan"},"countryiso3code":"JPN","date":"2001","value":1.33,"unit":"","obs_status":"","decimal":2},
   {"indicator":{"id":"SP.DYN.TFRT.IN","value":"Fertility rate, total (births per woman)"},"country":{"id":"JP","value":"Japan"},"countryiso3code":"JPN","date":"2000","value":1.36,"unit":"","obs_status":"","decimal":2},
   {"indicator":{"id":"SP.DYN.TFRT.IN","value":"Fertility rate, total (births per woman)"},"country":{"id":"1W","value":"World"},"countryiso3code":"","date":"2000","value":2.7,"unit":"","obs_status":"","decimal":2},
+  {"indicator":{"id":"SP.DYN.TFRT.IN","value":"Fertility rate, total (births per woman)"},"country":{"id":"XU","value":"North America"},"countryiso3code":"NAC","date":"2000","value":2.0,"unit":"","obs_status":"","decimal":2},
   {"indicator":{"id":"SP.DYN.TFRT.IN","value":"Fertility rate, total (births per woman)"},"country":{"id":"US","value":"United States"},"countryiso3code":"USA","date":"2000","value":null,"unit":"","obs_status":"","decimal":2}]]

@@ -3,7 +3,14 @@ name = "theme-growth-fertility"
 version = "0.1.0"
 description = "Theme: economic growth vs fertility (cross-country and within-country)"
 requires-python = ">=3.13"
-dependencies = ["socioscope-core", "pydantic>=2.9"]
+dependencies = [
+  "socioscope-core",
+  "pydantic>=2.9",
+  "polars>=1.0",
+  "pyarrow>=17",
+  "statsmodels>=0.14",
+  "matplotlib>=3.9",
+]
 
 [project.entry-points."socioscope.themes"]
 growth-fertility = "theme_growth_fertility.wiring:PIPELINE"

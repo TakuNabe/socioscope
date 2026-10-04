@@ -1,0 +1,239 @@
+== mart ==
+rows=14322 countries=217 years=1960-2025
+  tfr: non-null=14073 null_rate=0.017
+  gdp_pcap_ppp: non-null=6977 null_rate=0.513
+  gdp_growth: non-null=11408 null_rate=0.203
+  population: non-null=14292 null_rate=0.002
+== analysis sample (tfr & gdp_pcap_ppp observed, year >= 1990) ==
+rows=6792 countries=199 years=1990-2024
+  obs per country: min=12 median=35 max=35
+  income_group null rows: 0
+== decade summary ==
+shape: (4, 6)
+┌────────┬──────┬───────────┬─────────────────────┬────────────┬──────────────────┐
+│ decade ┆ n    ┆ countries ┆ median_gdp_pcap_ppp ┆ median_tfr ┆ corr_log_gdp_tfr │
+│ ---    ┆ ---  ┆ ---       ┆ ---                 ┆ ---        ┆ ---              │
+│ i64    ┆ u32  ┆ u32       ┆ f64                 ┆ f64        ┆ f64              │
+╞════════╪══════╪═══════════╪═════════════════════╪════════════╪══════════════════╡
+│ 1990   ┆ 1876 ┆ 190       ┆ 9346.099849         ┆ 3.1545     ┆ -0.740575        │
+│ 2000   ┆ 1940 ┆ 198       ┆ 11746.124656        ┆ 2.5        ┆ -0.772226        │
+│ 2010   ┆ 1987 ┆ 199       ┆ 15258.085815        ┆ 2.209      ┆ -0.795724        │
+│ 2020   ┆ 989  ┆ 199       ┆ 16798.151578        ┆ 1.962      ┆ -0.816583        │
+└────────┴──────┴───────────┴─────────────────────┴────────────┴──────────────────┘
+
+== main specifications (SE clustered by iso3, 95% CI) ==
+[M1] pooled OLS, linear                                    n= 6792 G=199
+  ln_gdp: -1.0448 (se 0.0541) [-1.1509, -0.9388]
+  r2=0.6018
+[M2] two-way FE (iso3 + year), linear                      n= 6792 G=199
+  ln_gdp: +0.1043 (se 0.0980) [-0.0878, +0.2963]
+  r2=0.9479
+[M3] pooled OLS, quadratic                                 n= 6792 G=199
+  ln_gdp: -5.5825 (se 0.6447) [-6.8461, -4.3189]
+  sq: +0.2446 (se 0.0341) [+0.1777, +0.3115]
+  r2=0.6555
+  turning_point_ln_gdp=11.4119
+  turning_point_gdp=90395.1381
+  p_sq=0.0000
+[M4] two-way FE, quadratic                                 n= 6792 G=199
+  ln_gdp: -5.3278 (se 0.7098) [-6.7190, -3.9365]
+  sq: +0.3036 (se 0.0381) [+0.2290, +0.3783]
+  r2=0.9595
+  turning_point_ln_gdp=8.7730
+  turning_point_gdp=6457.3510
+  p_sq=0.0000
+
+== J-curve test: high-income subsamples ==
+[H-gdp20k] pooled, linear                                  n= 2413 G= 99
+  ln_gdp: -0.1220 (se 0.1286) [-0.3740, +0.1300]
+  r2=0.0061
+[H-gdp20k] two-way FE, linear                              n= 2413 G= 99
+  ln_gdp: +0.8260 (se 0.2300) [+0.3753, +1.2767]
+  r2=0.8700
+[H-gdp20k] two-way FE, quadratic                           n= 2413 G= 99
+  ln_gdp: +3.0882 (se 3.4675) [-3.7080, +9.8843]
+  sq: -0.1050 (se 0.1639) [-0.4261, +0.2162]
+  r2=0.8705
+  turning_point_ln_gdp=14.7126
+  turning_point_gdp=2452350.0349
+  p_sq=0.5219
+[H-gdp30k] pooled, linear                                  n= 1812 G= 75
+  ln_gdp: -0.0598 (se 0.1797) [-0.4119, +0.2924]
+  r2=0.0010
+[H-gdp30k] two-way FE, linear                              n= 1812 G= 75
+  ln_gdp: +0.9141 (se 0.3133) [+0.3001, +1.5282]
+  r2=0.8491
+[H-gdp30k] two-way FE, quadratic                           n= 1812 G= 75
+  ln_gdp: +11.1836 (se 5.7952) [-0.1748, +22.5420]
+  sq: -0.4637 (se 0.2628) [-0.9787, +0.0514]
+  r2=0.8538
+  turning_point_ln_gdp=12.0601
+  turning_point_gdp=172835.4070
+  p_sq=0.0776
+[H-wb_group] pooled, linear                                n= 2487 G= 74
+  ln_gdp: -0.1923 (se 0.1283) [-0.4437, +0.0592]
+  r2=0.0296
+[H-wb_group] two-way FE, linear                            n= 2487 G= 74
+  ln_gdp: +0.4667 (se 0.1835) [+0.1071, +0.8263]
+  r2=0.8245
+[H-wb_group] two-way FE, quadratic                         n= 2487 G= 74
+  ln_gdp: -2.3354 (se 2.0504) [-6.3542, +1.6833]
+  sq: +0.1369 (se 0.1024) [-0.0637, +0.3375]
+  r2=0.8277
+  turning_point_ln_gdp=8.5297
+  turning_point_gdp=5062.8334
+  p_sq=0.1811
+
+== J-curve test: cross-sectional (pooled + year FE) slope among high-income by decade ==
+[X-1990s] high-income(gdp20k), pooled + year FE            n=  491 G= 57
+  ln_gdp: +0.3078 (se 0.3506) [-0.3795, +0.9950]
+  r2=0.0365
+[X-1990s] high-income(gdp20k), pooled quadratic + year FE  n=  491 G= 57
+  ln_gdp: -20.8637 (se 11.3654) [-43.1394, +1.4120]
+  sq: +0.9875 (se 0.5257) [-0.0429, +2.0179]
+  r2=0.0782
+  turning_point_ln_gdp=10.5638
+  turning_point_gdp=38706.6267
+  p_sq=0.0603
+[X-2000s] high-income(gdp20k), pooled + year FE            n=  673 G= 81
+  ln_gdp: -0.1142 (se 0.1514) [-0.4109, +0.1824]
+  r2=0.0068
+[X-2000s] high-income(gdp20k), pooled quadratic + year FE  n=  673 G= 81
+  ln_gdp: -6.5154 (se 5.1380) [-16.5857, +3.5549]
+  sq: +0.2988 (se 0.2389) [-0.1694, +0.7671]
+  r2=0.0183
+  turning_point_ln_gdp=10.9016
+  turning_point_gdp=54261.9208
+  p_sq=0.2110
+[X-2010s] high-income(gdp20k), pooled + year FE            n=  819 G= 91
+  ln_gdp: -0.2350 (se 0.0993) [-0.4297, -0.0404]
+  r2=0.0566
+[X-2010s] high-income(gdp20k), pooled quadratic + year FE  n=  819 G= 91
+  ln_gdp: +0.2768 (se 3.2388) [-6.0712, +6.6247]
+  sq: -0.0238 (se 0.1497) [-0.3172, +0.2697]
+  r2=0.0568
+  turning_point_ln_gdp=5.8235
+  turning_point_gdp=338.1526
+  p_sq=0.8739
+[X-2020s] high-income(gdp20k), pooled + year FE            n=  430 G= 92
+  ln_gdp: -0.1337 (se 0.0702) [-0.2713, +0.0038]
+  r2=0.0361
+[X-2020s] high-income(gdp20k), pooled quadratic + year FE  n=  430 G= 92
+  ln_gdp: +2.3797 (se 2.7246) [-2.9605, +7.7199]
+  sq: -0.1168 (se 0.1265) [-0.3647, +0.1311]
+  r2=0.0413
+  turning_point_ln_gdp=10.1851
+  turning_point_gdp=26504.8040
+  p_sq=0.3557
+
+== J-curve test: piecewise-linear (hinge) on full sample, two-way FE ==
+[S-gdp20k] FE spline, knot=9.903                           n= 6792 G=199
+  ln_gdp: -0.1669 (se 0.1121) [-0.3866, +0.0527]
+  ln_gdp_hinge: +1.5664 (se 0.1848) [+1.2043, +1.9286]
+  r2=0.9577
+  slope_above_knot=1.3995
+  p_hinge=0.0000
+[S-gdp30k] FE spline, knot=10.309                          n= 6792 G=199
+  ln_gdp: -0.0205 (se 0.1012) [-0.2189, +0.1779]
+  ln_gdp_hinge: +1.6139 (se 0.2431) [+1.1376, +2.0903]
+  r2=0.9545
+  slope_above_knot=1.5934
+  p_hinge=0.0000
+
+== robustness (two-way FE, linear; and high-income FE quadratic where noted) ==
+[R] period 1990-2007: pooled linear                        n= 3421 G=195
+  ln_gdp: -1.0905 (se 0.0671) [-1.2219, -0.9591]
+  r2=0.5684
+[R] period 1990-2007: FE linear                            n= 3421 G=195
+  ln_gdp: +0.1206 (se 0.0790) [-0.0342, +0.2754]
+  r2=0.9788
+[R] period 1990-2007: high-income(gdp20k) FE quadratic     n= 1008 G= 80
+  ln_gdp: -2.5046 (se 5.2562) [-12.8066, +7.7973]
+  sq: +0.1701 (se 0.2540) [-0.3277, +0.6678]
+  r2=0.9359
+  turning_point_ln_gdp=7.3641
+  turning_point_gdp=1578.2928
+  p_sq=0.5031
+[R] period 1990-2007: high-income(gdp20k) FE linear        n= 1008 G= 80
+  ln_gdp: +1.1299 (se 0.3967) [+0.3524, +1.9074]
+  r2=0.9355
+[R] period 2008-2024: pooled linear                        n= 3371 G=199
+  ln_gdp: -0.9546 (se 0.0517) [-1.0560, -0.8532]
+  r2=0.6359
+[R] period 2008-2024: FE linear                            n= 3371 G=199
+  ln_gdp: +0.1876 (se 0.0816) [+0.0276, +0.3477]
+  r2=0.9821
+[R] period 2008-2024: high-income(gdp20k) FE quadratic     n= 1405 G= 97
+  ln_gdp: +4.3800 (se 1.9830) [+0.4935, +8.2666]
+  sq: -0.1847 (se 0.0908) [-0.3626, -0.0067]
+  r2=0.9521
+  turning_point_ln_gdp=11.8579
+  turning_point_gdp=141190.6644
+  p_sq=0.0419
+[R] period 2008-2024: high-income(gdp20k) FE linear        n= 1405 G= 97
+  ln_gdp: +0.4015 (se 0.1092) [+0.1875, +0.6156]
+  r2=0.9508
+[R] drop 2020-2024 (COVID years): pooled linear            n= 5803 G=199
+  ln_gdp: -1.0589 (se 0.0572) [-1.1709, -0.9469]
+  r2=0.5950
+[R] drop 2020-2024 (COVID years): FE linear                n= 5803 G=199
+  ln_gdp: +0.0768 (se 0.0994) [-0.1179, +0.2716]
+  r2=0.9570
+[R] drop 2020-2024 (COVID years): high-income(gdp20k) FE quadratic n= 1983 G= 93
+  ln_gdp: +2.8606 (se 4.0137) [-5.0060, +10.7272]
+  sq: -0.0901 (se 0.1903) [-0.4631, +0.2830]
+  r2=0.8862
+  turning_point_ln_gdp=15.8807
+  turning_point_gdp=7887185.9012
+  p_sq=0.6361
+[R] drop 2020-2024 (COVID years): high-income(gdp20k) FE linear n= 1983 G= 93
+  ln_gdp: +0.9175 (se 0.2696) [+0.3890, +1.4459]
+  r2=0.8859
+[R] drop population < 1,000,000: pooled linear             n= 5234 G=154
+  ln_gdp: -1.1004 (se 0.0614) [-1.2208, -0.9800]
+  r2=0.6051
+[R] drop population < 1,000,000: FE linear                 n= 5234 G=154
+  ln_gdp: +0.2363 (se 0.1150) [+0.0110, +0.4616]
+  r2=0.9522
+[R] drop population < 1,000,000: high-income(gdp20k) FE quadratic n= 1724 G= 71
+  ln_gdp: -0.4295 (se 5.3274) [-10.8710, +10.0120]
+  sq: +0.0742 (se 0.2586) [-0.4327, +0.5810]
+  r2=0.8722
+  turning_point_ln_gdp=2.8958
+  turning_point_gdp=18.0985
+  p_sq=0.7743
+[R] drop population < 1,000,000: high-income(gdp20k) FE linear n= 1724 G= 71
+  ln_gdp: +1.1527 (se 0.3628) [+0.4416, +1.8638]
+  r2=0.8720
+[R] drop oil states: pooled linear                         n= 6127 G=180
+  ln_gdp: -1.1274 (se 0.0519) [-1.2291, -1.0256]
+  r2=0.6886
+[R] drop oil states: FE linear                             n= 6127 G=180
+  ln_gdp: +0.0031 (se 0.1217) [-0.2354, +0.2415]
+  r2=0.9502
+[R] drop oil states: high-income(gdp20k) FE quadratic      n= 2073 G= 86
+  ln_gdp: +1.7709 (se 1.7861) [-1.7299, +5.2716]
+  sq: -0.0706 (se 0.0818) [-0.2309, +0.0897]
+  r2=0.8554
+  turning_point_ln_gdp=12.5454
+  turning_point_gdp=280811.6083
+  p_sq=0.3882
+[R] drop oil states: high-income(gdp20k) FE linear         n= 2073 G= 86
+  ln_gdp: +0.2547 (se 0.1279) [+0.0040, +0.5054]
+  r2=0.8548
+[R] drop small + oil: pooled linear                        n= 4656 G=136
+  ln_gdp: -1.1877 (se 0.0591) [-1.3035, -1.0719]
+  r2=0.6934
+[R] drop small + oil: FE linear                            n= 4656 G=136
+  ln_gdp: +0.1110 (se 0.1287) [-0.1412, +0.3632]
+  r2=0.9551
+[R] drop small + oil: high-income(gdp20k) FE quadratic     n= 1459 G= 59
+  ln_gdp: +3.3039 (se 2.5841) [-1.7608, +8.3686]
+  sq: -0.1472 (se 0.1235) [-0.3892, +0.0949]
+  r2=0.8540
+  turning_point_ln_gdp=11.2261
+  turning_point_gdp=75066.4914
+  p_sq=0.2335
+[R] drop small + oil: high-income(gdp20k) FE linear        n= 1459 G= 59
+  ln_gdp: +0.1889 (se 0.1898) [-0.1831, +0.5609]
+  r2=0.8516
