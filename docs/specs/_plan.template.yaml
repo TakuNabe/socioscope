@@ -1,0 +1,27 @@
+# plan manifest テンプレート（ADR 0004）。docs/specs/<feature>.plan.yaml として複製して使う。
+feature: <slug>
+spec: docs/specs/<feature>.md
+items:
+  - id: <slug-item>
+    title: <PR タイトル相当>
+    scope:                       # 触るファイル/ディレクトリ。重なる item は直列化
+      - <path/...>
+    depends_on: []               # 依存 item id
+    agent: pipeline-dev          # pipeline-dev | source-scout | analyst
+    acceptance: <完了条件（テスト観点／レポート観点）>
+    status: todo                 # todo | in_progress | in_review | pr_open | merged | blocked
+    pr:
+# 例:
+# items:
+#   - id: port-structurer
+#     title: "feat(core): Structurer Port と FakeStructurer"
+#     scope: [packages/core/src/socioscope_core/ports/structurer.py, packages/core/tests/core]
+#     depends_on: []
+#     agent: pipeline-dev
+#     acceptance: "Fake で構造化パイプラインの状態テストが green"
+#   - id: adapter-claude
+#     title: "feat(core): ClaudeStructurer（messages.parse + llm_cache）"
+#     scope: [packages/core/src/socioscope_core/adapters/claude_structurer.py, packages/core/tests/adapters]
+#     depends_on: [port-structurer]
+#     agent: pipeline-dev
+#     acceptance: "キャッシュヒット時に API を呼ばないことを Fake transport で確認"

@@ -1,0 +1,67 @@
+[project]
+name = "socioscope-workspace"
+version = "0.0.0"
+description = "Monorepo root for socioscope (public-data sociological analysis & causal inference)"
+requires-python = ">=3.13"
+# ルートは依存を持たない。実体は packages/core と themes/* の workspace member。
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/core", "themes/*"]
+
+[tool.uv.sources]
+socioscope-core = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "pyyaml>=6",
+  "types-PyYAML",
+  "socioscope-core",
+  "theme-wealth-population-distribution",
+  "theme-growth-fertility",
+]
+notebooks = ["marimo>=0.10", "matplotlib>=3.9", "plotly>=5"]
+
+[tool.uv.sources.theme-wealth-population-distribution]
+workspace = true
+[tool.uv.sources.theme-growth-fertility]
+workspace = true
+
+# ---- 共通ツール設定（全 member に適用）----
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["data", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "S", "SIM", "RUF"]
+ignore = ["S101", "RUF001", "RUF002", "RUF003"]  # assert in tests; 日本語の全角記号を許容
+
+[tool.ruff.lint.isort]
+known-first-party = ["socioscope_core", "theme_growth_fertility", "theme_wealth_population_distribution"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "RUF"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+mypy_path = ["packages/core/src", "themes/wealth-population-distribution/src", "themes/growth-fertility/src"]
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["duckdb", "duckdb.*", "pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["packages/core/tests", "themes/*/tests"]
+addopts = "-q --import-mode=importlib"
+pythonpath = ["packages/core/src"]

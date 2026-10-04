@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "notebooks",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--group", "notebooks", "marimo", "edit", "--headless", "--no-token", "--port", "2718", "notebooks"],
+      "port": 2718
+    }
+  ]
+}

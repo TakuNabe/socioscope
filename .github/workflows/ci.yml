@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - "themes/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci.yml"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: lint / type / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Sync (all workspace members, frozen lock)
+        run: uv sync --all-packages --frozen
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy packages/core/src themes/*/src
+      - run: uv run pytest
+      # Parquet が壊れていないか・DuckDB view が張れるかの最小スモーク
+      - name: DuckDB build smoke
+        run: uv run socioscope db build --path /tmp/ci.duckdb
+
+  data-guard:
+    name: data layout guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forbidden artifacts are not committed (ADR 0002)
+        run: |
+          set -e
+          if git ls-files | grep -E '\.duckdb(\.wal)?$'; then echo "::error::*.duckdb must not be committed"; exit 1; fi
+          if git ls-files 'data/raw/**' | grep -vE '^data/raw/(\.gitkeep|manifest\.jsonl)$'; then echo "::error::data/raw/** must not be committed (manifest only)"; exit 1; fi
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then echo "::error::.env must not be committed"; exit 1; fi
