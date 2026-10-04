@@ -10,14 +10,14 @@ src/theme_wealth_population_distribution/
   oecd.py                OECD SDMX REST の URL 組み立て（dataflow＋key）、CSV → 行（STRUCTURE_ID・全次元コードを照合、fail-closed）、OECD_MEMBERS（38）
   pipeline.py            fetch / stage / mart（Port 経由。I/O はここだけ）。OECD は _fetch_oecd / _stage_oecd / _mart_institutions に分離
   wiring.py              PIPELINE（entry point）
-  analysis/              report 用スクリプト（決定的、seed 固定）: a20261004_h1_ushape.py（H1）、a20261004_h1b_observed_only.py（H1b）、a20261004_h2_institutions.py（H2）
+  analysis/              report 用スクリプト（決定的、seed 固定）: a20261004_h1_ushape.py（H1）、a20261004_h1b_observed_only.py（H1b）、a20261005_h1c_quality_corrected.py（H1c: data_quality の向きを正した感度分析＋品質ヒートマップ）、a20261004_h2_institutions.py（H2）
 tests/                   fixtures/wid_data_sample.csv, wid_metadata_sample.csv（合成の数行）、fixtures/oecd_*_sample.csv（実レスポンスの JPN 数行）＋ Fake による状態テスト
 ```
 
 ## 状態
 WID.world を採用し fetch/stage/mart 実装済み（ライセンスは **CC BY-NC-SA 4.0** 扱い、`design/data-sources.md` 参照）。
 OECD SDMX（最高税率・社会支出・税収・相続税収）を H2 用に採用し fetch/stage/mart 実装済み（OECD Terms & Conditions 2024、出典表示で自由利用）。
-H1 report: `reports/2026-10-04-h1-ushape.md`。H2 report（限定・関連のみ）: `reports/2026-10-04-h2-institutions.md`。
+H1 report: `reports/2026-10-04-h1-ushape.md`（追補: H1b `2026-10-04-h1b-observed-only.md` 観測年のみ、H1c `2026-10-05-h1c-quality-corrected.md` data_quality 向き訂正）。H2 report（限定・関連のみ）: `reports/2026-10-04-h2-institutions.md`。
 World Bank Gini、UN WPP 等は未接続。
 
 ## 実行
@@ -46,6 +46,6 @@ uv run socioscope run wealth-population-distribution mart                # 両 m
 - **変数コード**: bulk CSV の `variable` は `sptincj992`（型+概念+pop+age）。staged ではサイト表記 `sptinc992j`（型+概念+age+pop）に正規化する（`wid.canonical_code`）。
 - **ISO2→ISO3**: `wid_iso2_to_iso3.csv` の固定表で変換。表にない・2 文字でないコードは**捨てる**（地域集計 `WO`/`QE`/`XF`/`QE-MER`、サブナショナル `US-CA`/`CN-RU`/`DE-*`、非 ISO `XI`/`ZZ`/`XE`）。旧国は ISO 3166-3（`SU`→`SUN`, `YU`→`YUG`, `DD`→`DDR`, `CS`/`XC`→`CSK`）、コソボ `KS`/`XK`→`XKX`（World Bank 流儀）。flag 付きで残す案は、mart の `iso3` キーの意味を崩すので採らなかった。
 - **欠損**: `None` のまま。補完しない。
-- **`data_quality`（0–5）の意味は WID 非公開**（`design/data-sources.md`）。本データの経験則（2026-10-04, H1b レポート）: **高いほど一次データに近い**（USA DINA 1962 年以降 = 5、SAU/JPN 資産の全年 = 0、DEU 資産は調査年 4・その間 0）。所得の observed 年は q3–5 のみだが、q3 以上でも imputed 年が多い。感度分析では「q ≤ 1（または 0）を落とす」向きで使う。旧記述「4〜5 は推計・外挿」は誤りだった（H1 レポートの該当変種は向きが逆、数値は据え置き・限界節に注記済み）。
+- **`data_quality`（0–5）の意味は WID 非公開**（`design/data-sources.md`）。本データの経験則（2026-10-04, H1b レポート）: **高いほど一次データに近い**（USA DINA 1962 年以降 = 5、SAU/JPN 資産の全年 = 0、DEU 資産は調査年 4・その間 0）。所得の observed 年は q3–5 のみだが、q3 以上でも imputed 年が多い。感度分析では「q ≤ 1（または 0）を落とす」向きで使う。旧記述「4〜5 は推計・外挿」は誤りだった（H1 レポートの該当変種は向きが逆、数値は参考値として据え置き）。正しい向きの再計算は H1c レポート（`a20261005_h1c_quality_corrected.py`、`mask_quality`）: 資産は国×年の 70% が q0 で q ≤ 1 を落とすと適格国 46 → 8（層別できない）、所得は 1980 年以前が q3 中心。JPN 所得は 1980 年以前 q4・以後 q1 で metadata の construction（1980 年以前 imputed）と食い違う。品質の国×年ヒートマップは `reports/figures/h1c_quality_heatmap_top1_{wealth,income}.png`。
 - **OECD**: 対象は `oecd.OECD_MEMBERS` の 38 か国のみ（dataflow に含まれる集計・非加盟国は stage で捨てる）。raw は `data/raw/wealth-population-distribution/oecd/<indicator>.csv`（1 indicator 1 リクエスト、計 4）。`OBS_VALUE` 空は行ごと落とす。最高税率は SDMX に 2000 年以降しか無い（1981–1999 の Excel は robots.txt で Disallow のため使わない）。`--only <source>` は `Context.sources`（core）で実装、mart は無視する。
 - 資産統計はソース・年代で定義が異なる。断絶の説明は `staged/wid/metadata` の `source_text`/`method` にある。
