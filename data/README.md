@@ -9,3 +9,6 @@
 | `socioscope.duckdb` | 管理しない | `socioscope db build` で `staged.*`/`marts.*` view を再生成。 |
 
 詳細: `docs/adrs/0002-parquet-as-source-of-truth-duckdb-as-derived.md`
+
+## データのライセンス
+Parquet はコード（MIT）とは別に、出典のライセンスを継承する。WID.world 由来のテーブル（`staged/wid/*`、`marts/wealth_population_panel`）は CC BY-NC-SA 4.0 なので**非商用に限る**。出典表記は `design/data-sources.md` の記載に従う。
