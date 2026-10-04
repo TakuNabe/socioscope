@@ -20,6 +20,8 @@ shape: (4, 6)
 │ 2010   ┆ 1987 ┆ 199       ┆ 15258.085815        ┆ 2.209      ┆ -0.795724        │
 │ 2020   ┆ 989  ┆ 199       ┆ 16798.151578        ┆ 1.962      ┆ -0.816583        │
 └────────┴──────┴───────────┴─────────────────────┴────────────┴──────────────────┘
+== oil states: listed=20 in_sample=19 absent=['VEN'] ==
+== population < 1,000,000: fully_dropped_countries=45 partially_dropped_countries=9 ==
 
 == main specifications (SE clustered by iso3, 95% CI) ==
 [M1] pooled OLS, linear                                    n= 6792 G=199
@@ -237,3 +239,77 @@ shape: (4, 6)
 [R] drop small + oil: high-income(gdp20k) FE linear        n= 1459 G= 59
   ln_gdp: +0.1889 (se 0.1898) [-0.1831, +0.5609]
   r2=0.8516
+
+== robustness: full-sample two-way FE hinge spline on the same variants ==
+[RS] period 1990-2007: FE spline gdp20k                    n= 3421 G=195
+  ln_gdp: -0.0682 (se 0.0869) [-0.2384, +0.1021]
+  ln_gdp_hinge: +1.5119 (se 0.2158) [+1.0890, +1.9349]
+  r2=0.9820
+  slope_above_knot=1.4437
+  p_hinge=0.0000
+[RS] period 1990-2007: FE spline gdp30k                    n= 3421 G=195
+  ln_gdp: +0.0337 (se 0.0807) [-0.1245, +0.1919]
+  ln_gdp_hinge: +1.6433 (se 0.2776) [+1.0992, +2.1874]
+  r2=0.9815
+  slope_above_knot=1.6770
+  p_hinge=0.0000
+[RS] period 2008-2024: FE spline gdp20k                    n= 3371 G=199
+  ln_gdp: -0.0790 (se 0.1228) [-0.3196, +0.1617]
+  ln_gdp_hinge: +0.7392 (se 0.1831) [+0.3804, +1.0981]
+  r2=0.9831
+  slope_above_knot=0.6603
+  p_hinge=0.0001
+[RS] period 2008-2024: FE spline gdp30k                    n= 3371 G=199
+  ln_gdp: +0.0453 (se 0.1039) [-0.1583, +0.2489]
+  ln_gdp_hinge: +0.6310 (se 0.2027) [+0.2337, +1.0283]
+  r2=0.9826
+  slope_above_knot=0.6763
+  p_hinge=0.0019
+[RS] drop 2020-2024 (COVID years): FE spline gdp20k        n= 5803 G=199
+  ln_gdp: -0.1658 (se 0.1105) [-0.3825, +0.0509]
+  ln_gdp_hinge: +1.5968 (se 0.1931) [+1.2184, +1.9752]
+  r2=0.9651
+  slope_above_knot=1.4310
+  p_hinge=0.0000
+[RS] drop 2020-2024 (COVID years): FE spline gdp30k        n= 5803 G=199
+  ln_gdp: -0.0245 (se 0.1004) [-0.2212, +0.1723]
+  ln_gdp_hinge: +1.6258 (se 0.2601) [+1.1160, +2.1356]
+  r2=0.9624
+  slope_above_knot=1.6014
+  p_hinge=0.0000
+[RS] drop population < 1,000,000: FE spline gdp20k         n= 5234 G=154
+  ln_gdp: -0.0086 (se 0.1214) [-0.2466, +0.2294]
+  ln_gdp_hinge: +1.7685 (se 0.2066) [+1.3636, +2.1734]
+  r2=0.9631
+  slope_above_knot=1.7599
+  p_hinge=0.0000
+[RS] drop population < 1,000,000: FE spline gdp30k         n= 5234 G=154
+  ln_gdp: +0.1415 (se 0.1116) [-0.0772, +0.3601]
+  ln_gdp_hinge: +2.0512 (se 0.3361) [+1.3925, +2.7099]
+  r2=0.9606
+  slope_above_knot=2.1927
+  p_hinge=0.0000
+[RS] drop oil states: FE spline gdp20k                     n= 6127 G=180
+  ln_gdp: -0.2567 (se 0.1403) [-0.5317, +0.0184]
+  ln_gdp_hinge: +1.6666 (se 0.1971) [+1.2804, +2.0528]
+  r2=0.9608
+  slope_above_knot=1.4099
+  p_hinge=0.0000
+[RS] drop oil states: FE spline gdp30k                     n= 6127 G=180
+  ln_gdp: -0.1141 (se 0.1276) [-0.3642, +0.1359]
+  ln_gdp_hinge: +1.7742 (se 0.2640) [+1.2567, +2.2917]
+  r2=0.9579
+  slope_above_knot=1.6601
+  p_hinge=0.0000
+[RS] drop small + oil: FE spline gdp20k                    n= 4656 G=136
+  ln_gdp: -0.0658 (se 0.1366) [-0.3336, +0.2020]
+  ln_gdp_hinge: +1.8470 (se 0.2249) [+1.4061, +2.2879]
+  r2=0.9663
+  slope_above_knot=1.7812
+  p_hinge=0.0000
+[RS] drop small + oil: FE spline gdp30k                    n= 4656 G=136
+  ln_gdp: +0.0768 (se 0.1281) [-0.1743, +0.3279]
+  ln_gdp_hinge: +2.1772 (se 0.3852) [+1.4222, +2.9323]
+  r2=0.9641
+  slope_above_knot=2.2540
+  p_hinge=0.0000

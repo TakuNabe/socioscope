@@ -78,7 +78,7 @@ def build_regression_frame(
 
 
 def decade_summary(frame: pl.DataFrame) -> pl.DataFrame:
-    """queries/panel_by_decade.sql と同じ定義（n, 国数, 中央値, corr(ln gdp, tfr)）。"""
+    """panel_by_decade.sql の列（n, 中央値, corr(ln gdp, tfr)）＋ 国数（SQL には無い列）。"""
     return (
         frame.group_by("decade")
         .agg(
@@ -121,6 +121,29 @@ def turning_point(b_lin: float, b_sq: float) -> float | None:
     if abs(b_sq) < 1e-12:
         return None
     return -b_lin / (2 * b_sq)
+
+
+def in_sample_split(frame: pl.DataFrame, iso3s: Iterable[str]) -> tuple[list[str], list[str]]:
+    """Split a pre-fixed country list into (present in frame, absent from frame), both sorted."""
+    present = set(frame["iso3"].unique().to_list())
+    codes = sorted(set(iso3s))
+    return [c for c in codes if c in present], [c for c in codes if c not in present]
+
+
+def small_country_breakdown(frame: pl.DataFrame, min_population: float) -> dict[str, int]:
+    """How a row-level population filter acts on countries.
+
+    fully_dropped: countries whose every (observed-population) row is below the threshold.
+    partially_dropped: countries with rows on both sides of the threshold.
+    Rows with null population are kept by build_regression_frame and are ignored here.
+    """
+    obs = frame.filter(pl.col("population").is_not_null())
+    per = obs.group_by("iso3").agg(
+        (pl.col("population") < min_population).sum().alias("below"), pl.len().alias("n")
+    )
+    fully = per.filter(pl.col("below") == pl.col("n")).height
+    partial = per.filter((pl.col("below") > 0) & (pl.col("below") < pl.col("n"))).height
+    return {"fully_dropped": fully, "partially_dropped": partial}
 
 
 # ---------------------------------------------------------------- estimation (statsmodels)
@@ -324,6 +347,13 @@ def describe_panel(panel: pl.DataFrame, frame: pl.DataFrame) -> None:
     print(f"  income_group null rows: {frame['income_group'].null_count()}")
     print("== decade summary ==")
     print(decade_summary(frame))
+    oil_in, oil_out = in_sample_split(frame, OIL_STATES)
+    print(f"== oil states: listed={len(OIL_STATES)} in_sample={len(oil_in)} absent={oil_out} ==")
+    small = small_country_breakdown(frame, SMALL_POP)
+    print(
+        f"== population < {SMALL_POP:,}: fully_dropped_countries={small['fully_dropped']} "
+        f"partially_dropped_countries={small['partially_dropped']} ==",
+    )
 
 
 def run(data_dir: Path, fig_dir: Path) -> None:
@@ -430,6 +460,18 @@ def run(data_dir: Path, fig_dir: Path) -> None:
                 fe=True,
             ).line()
         )
+
+    print("\n== robustness: full-sample two-way FE hinge spline on the same variants ==")
+    for name, sub in variants:
+        for rule, knot in HIGH_INCOME_THRESHOLDS.items():
+            print(
+                fit(
+                    piecewise_terms(sub, knot),
+                    "tfr ~ ln_gdp + ln_gdp_hinge",
+                    label=f"[RS] {name}: FE spline {rule}",
+                    fe=True,
+                ).line()
+            )
 
 
 def main() -> None:

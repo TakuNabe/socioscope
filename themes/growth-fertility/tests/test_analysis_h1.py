@@ -88,3 +88,20 @@ def test_high_income_rules() -> None:
     assert set(h1.high_income(frame, "gdp20k")["iso3"]) == {"JPN", "USA", "QAT"}
     assert set(h1.high_income(frame, "wb_group")["iso3"]) == {"JPN", "USA", "QAT"}
     assert set(h1.high_income(frame, "gdp30k")["iso3"]) == {"JPN", "USA", "QAT"}
+
+
+def test_in_sample_split_separates_present_and_absent_codes() -> None:
+    frame = h1.build_regression_frame(panel())  # QAT present; VEN absent
+    present, absent = h1.in_sample_split(frame, {"VEN", "QAT"})
+    assert present == ["QAT"] and absent == ["VEN"]
+
+
+def test_small_country_breakdown_counts_fully_and_partially_dropped() -> None:
+    frame = pl.DataFrame(
+        {
+            "iso3": ["A", "A", "B", "B", "C", "C", "D"],
+            "population": [5e5, 6e5, 9e5, 1.2e6, 2e6, 3e6, None],
+        }
+    )
+    out = h1.small_country_breakdown(frame, 1_000_000)
+    assert out == {"fully_dropped": 1, "partially_dropped": 1}
