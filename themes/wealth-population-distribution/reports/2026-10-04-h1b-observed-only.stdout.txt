@@ -1,0 +1,194 @@
+== inputs ==
+mart rows=10396 data_points rows=6261 (variables: shweal992j sptinc992j)
+== coverage by construction: top1_wealth_share (window 1950-2024) ==
+  country-years: n=2281 observed=0 (0.000) partial=0 (0.000) imputed=148 (0.065) unknown=2133 (0.935)
+  countries with >=1 observed year: 0/46; with >=3 observed before 1990: 0
+  iso3    n  obs part  imp  unk  first_obs  last_obs
+  ARG    48    0    0    0   48          -         -
+  AUS    48    0    0    0   48          -         -
+  AUT    45    0    0    0   45          -         -
+  BEL    45    0    0    0   45          -         -
+  BRA    48    0    0    0   48          -         -
+  CAN    59    0    0    0   59          -         -
+  CHE    45    0    0    0   45          -         -
+  CHL    48    0    0    0   48          -         -
+  CHN    50    0    0    0   50          -         -
+  COL    48    0    0    0   48          -         -
+  CRI    45    0    0    0   45          -         -
+  CZE    45    0    0    0   45          -         -
+  DEU    56    0    0    0   56          -         -
+  DNK    48    0    0    0   48          -         -
+  ESP    48    0    0    3   45          -         -
+  EST    45    0    0    0   45          -         -
+  FIN    45    0    0    0   45          -         -
+  FRA    75    0    0   30   45          -         -
+  GBR    75    0    0   30   45          -         -
+  GRC    45    0    0    0   45          -         -
+  HUN    45    0    0    0   45          -         -
+  IDN    48    0    0    3   45          -         -
+  IND    50    0    0    5   45          -         -
+  IRL    45    0    0    0   45          -         -
+  ISL    45    0    0    0   45          -         -
+  ISR    45    0    0    0   45          -         -
+  ITA    48    0    0    3   45          -         -
+  JPN    48    0    0    3   45          -         -
+  KOR    48    0    0    3   45          -         -
+  LTU    45    0    0    0   45          -         -
+  LUX    45    0    0    0   45          -         -
+  LVA    45    0    0    0   45          -         -
+  MEX    48    0    0    0   48          -         -
+  NLD    70    0    0   25   45          -         -
+  NOR    48    0    0    3   45          -         -
+  NZL    48    0    0    0   48          -         -
+  POL    45    0    0    0   45          -         -
+  PRT    45    0    0    0   45          -         -
+  RUS    48    0    0    0   48          -         -
+  SAU    48    0    0    0   48          -         -
+  SVK    45    0    0    0   45          -         -
+  SVN    45    0    0    0   45          -         -
+  SWE    52    0    0    7   45          -         -
+  TUR    48    0    0    0   48          -         -
+  USA    75    0    0   30   45          -         -
+  ZAF    48    0    0    3   45          -         -
+== coverage by construction: top1_income_share (window 1950-2024) ==
+  country-years: n=2696 observed=640 (0.237) partial=193 (0.072) imputed=883 (0.328) unknown=980 (0.364)
+  countries with >=1 observed year: 26/46; with >=3 observed before 1990: 15
+  iso3    n  obs part  imp  unk  first_obs  last_obs
+  ARG    56    0    0   11   45          -         -
+  AUS    75    0    0    0   75          -         -
+  AUT    45   17   23    4    1       2003      2019
+  BEL    45   12   19   13    1       1992      2013
+  BRA    48    0    0   23   25          -         -
+  CAN    75    0    0    0   75          -         -
+  CHE    60   12   17   30    1       2000      2014
+  CHL    61    0    0   16   45          -         -
+  CHN    50    0    0    3   47          -         -
+  COL    48    0    0   16   32          -         -
+  CRI    45    0    0    0   45          -         -
+  CZE    45   18   18    8    1       1980      2015
+  DEU    56   16    9   30    1       1989      2013
+  DNK    74   19   12   42    1       1980      2010
+  ESP    58   11   21   25    1       1985      2012
+  EST    45   10    0   34    1       2010      2019
+  FIN    75   23    7   44    1       1980      2009
+  FRA    75   44    0   30    1       1980      2023
+  GBR    74   34    0   39    1       1981      2014
+  GRC    58   38    0   19    1       1981      2019
+  HUN    61   22    7   31    1       1980      2008
+  IDN    48    0    0    3   45          -         -
+  IND    75    0    0   30   45          -         -
+  IRL    64   24   12   27    1       1980      2015
+  ISL    45   15   17   10    3       2003      2017
+  ISR    46    0    0    0   46          -         -
+  ITA    54   28   11   14    1       1981      2018
+  JPN    75    0    0   30   45          -         -
+  KOR    75    0    0   30   45          -         -
+  LTU    45   23    0   21    1       1988      2019
+  LUX    45   32    0   12    1       1985      2019
+  LVA    45   29    0   15    1       1988      2019
+  MEX    48    0    0   25   23          -         -
+  NLD    60   23   11   25    1       1981      2014
+  NOR    74   24    7   42    1       1986      2011
+  NZL    75    0    0    0   75          -         -
+  POL    61   30    2   28    1       1983      2015
+  PRT    75   39    0   35    1       1980      2019
+  RUS    56    0    0    0   56          -         -
+  SAU    48    0    0    0   48          -         -
+  SVK    45   35    0    9    1       1980      2019
+  SVN    45   22    0   22    1       1991      2012
+  SWE    75   40    0   34    1       1980      2019
+  TUR    48    0    0    3   45          -         -
+  USA    75    0    0   30   45          -         -
+  ZAF    65    0    0   20   45          -         -
+
+== data_quality x construction (window, both series; rows=construction, cols=data_quality 0..5) ==
+  top1_wealth_share:
+    observed  q0=   0 q1=   0 q2=   0 q3=   0 q4=   0 q5=   0 qNone=0
+    partial   q0=   0 q1=   0 q2=   0 q3=   0 q4=   0 q5=   0 qNone=0
+    imputed   q0=  24 q1=   2 q2=  82 q3=  12 q4=  28 q5=   0 qNone=0
+    unknown   q0=1572 q1=  68 q2=  60 q3= 119 q4= 257 q5=  57 qNone=0
+  top1_income_share:
+    observed  q0=   0 q1=   0 q2=   0 q3= 138 q4= 448 q5=  54 qNone=0
+    partial   q0=   0 q1=   0 q2=   7 q3=  50 q4= 136 q5=   0 qNone=0
+    imputed   q0=  50 q1= 105 q2=  49 q3= 543 q4= 115 q5=  21 qNone=0
+    unknown   q0=   3 q1= 245 q2= 135 q3= 159 q4= 272 q5= 166 qNone=0
+
+== V0: base (all years, = H1) ==
+  [M] V0 top1_wealth_share                                               eligible=46 (ineligible= 0) U=12 share=0.261 wilson95=[0.156, 0.403] p(one-sided, H0 p=0.5)=0.9997
+  [A] V0 rise since 1980 > 0: top1_wealth_share                          eligible=46 (ineligible= 0) U=35 share=0.761 wilson95=[0.621, 0.861] p(one-sided, H0 p=0.5)=0.0003
+    U-shape countries (12): AUS CAN DNK ESP FRA GBR IND ITA MEX SWE USA ZAF
+    JPN top1_wealth_share: n=48 eligible=True u_shape=False first 1950=0.218 trough 1950=0.218 last 2024=0.246 change_since_1980(nearest 1980)=+0.019 | rank 2024: 29/46
+  [M] V0 top1_income_share                                               eligible=46 (ineligible= 0) U=22 share=0.478 wilson95=[0.341, 0.619] p(one-sided, H0 p=0.5)=0.6706
+  [A] V0 rise since 1980 > 0: top1_income_share                          eligible=46 (ineligible= 0) U=37 share=0.804 wilson95=[0.668, 0.893] p(one-sided, H0 p=0.5)=0.0000
+    U-shape countries (22): AUS BEL CAN DEU DNK FIN FRA GBR HUN IND IRL ITA MEX NLD NOR NZL POL PRT RUS SWE USA ZAF
+    JPN top1_income_share: n=75 eligible=True u_shape=False first 1950=0.105 trough 1976=0.098 last 2024=0.127 change_since_1980(nearest 1980)=+0.022 | rank 2024: 22/46
+
+== V1: metadata strict: keep construction == observed ==
+  [M] V1 top1_wealth_share                                               eligible= 0 (ineligible=46) U= 0 share=nan wilson95=[nan, nan] p(one-sided, H0 p=0.5)=nan
+  [A] V1 rise since 1980 > 0: top1_wealth_share                          eligible= 0 (ineligible=46) U= 0 share=nan wilson95=[nan, nan] p(one-sided, H0 p=0.5)=nan
+    U-shape countries (0): -
+    eligibility/U changed vs V0 (46): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE DEU DNK ESP EST FIN FRA GBR GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NLD NOR NZL POL PRT RUS SAU SVK SVN SWE TUR USA ZAF
+    ineligible (46): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE DEU DNK ESP EST FIN FRA GBR GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NLD NOR NZL POL PRT RUS SAU SVK SVN SWE TUR USA ZAF
+    JPN top1_wealth_share: no years left
+  [M] V1 top1_income_share                                               eligible=15 (ineligible=31) U= 1 share=0.067 wilson95=[0.012, 0.298] p(one-sided, H0 p=0.5)=1.0000
+  [A] V1 rise since 1980 > 0: top1_income_share                          eligible=15 (ineligible=31) U=14 share=0.933 wilson95=[0.702, 0.988] p(one-sided, H0 p=0.5)=0.0005
+    U-shape countries (1): FIN
+    eligibility/U changed vs V0 (41): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI DEU DNK ESP EST FRA GBR HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LVA MEX NLD NOR NZL POL PRT RUS SAU SVN SWE TUR USA ZAF
+    ineligible (31): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI DEU ESP EST IDN IND ISL ISR JPN KOR LTU LVA MEX NLD NZL RUS SAU SVN TUR USA ZAF
+    JPN top1_income_share: no years left
+
+== V2: metadata lenient: drop construction == imputed ==
+  [M] V2 top1_wealth_share                                               eligible=46 (ineligible= 0) U= 9 share=0.196 wilson95=[0.107, 0.332] p(one-sided, H0 p=0.5)=1.0000
+  [A] V2 rise since 1980 > 0: top1_wealth_share                          eligible=46 (ineligible= 0) U=35 share=0.761 wilson95=[0.621, 0.861] p(one-sided, H0 p=0.5)=0.0003
+    U-shape countries (9): AUS CAN DNK ESP FRA GBR MEX SWE ZAF
+    eligibility/U changed vs V0 (3): IND ITA USA
+    ineligible (0): -
+    JPN top1_wealth_share: n=45 eligible=True u_shape=False first 1980=0.227 trough 1982=0.225 last 2024=0.246 change_since_1980(nearest 1980)=+0.019 | rank 2024: 29/46
+  [M] V2 top1_income_share                                               eligible=38 (ineligible= 8) U= 9 share=0.237 wilson95=[0.130, 0.392] p(one-sided, H0 p=0.5)=0.9998
+  [A] V2 rise since 1980 > 0: top1_income_share                          eligible=38 (ineligible= 8) U=31 share=0.816 wilson95=[0.666, 0.908] p(one-sided, H0 p=0.5)=0.0001
+    U-shape countries (9): AUS BEL CAN DEU FIN IND NOR NZL RUS
+    eligibility/U changed vs V0 (20): BRA COL DNK EST FRA GBR HUN IRL ISL ITA LTU LVA MEX NLD POL PRT SVN SWE USA ZAF
+    ineligible (8): BRA COL EST ISL LTU LVA MEX SVN
+    JPN top1_income_share: n=45 eligible=True u_shape=False first 1980=0.105 trough 1992=0.098 last 2024=0.127 change_since_1980(nearest 1980)=+0.022 | rank 2024: 22/46
+
+== V3: data_quality proxy: drop data_quality == 0 ==
+  [M] V3 top1_wealth_share                                               eligible= 9 (ineligible=37) U= 5 share=0.556 wilson95=[0.267, 0.811] p(one-sided, H0 p=0.5)=0.5000
+  [A] V3 rise since 1980 > 0: top1_wealth_share                          eligible= 9 (ineligible=37) U= 7 share=0.778 wilson95=[0.453, 0.937] p(one-sided, H0 p=0.5)=0.0898
+    U-shape countries (5): ESP FRA GBR SWE USA
+    eligibility/U changed vs V0 (39): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE DNK EST FIN GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NOR NZL POL PRT RUS SAU SVK SVN TUR ZAF
+    ineligible (37): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE EST FIN GRC HUN IDN IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NOR NZL POL PRT RUS SAU SVK SVN TUR ZAF
+    JPN top1_wealth_share: no years left
+  [M] V3 top1_income_share                                               eligible=46 (ineligible= 0) U=21 share=0.457 wilson95=[0.322, 0.598] p(one-sided, H0 p=0.5)=0.7693
+  [A] V3 rise since 1980 > 0: top1_income_share                          eligible=46 (ineligible= 0) U=37 share=0.804 wilson95=[0.668, 0.893] p(one-sided, H0 p=0.5)=0.0000
+    U-shape countries (21): AUS BEL CAN DEU DNK FIN FRA GBR HUN IND IRL ITA NLD NOR NZL POL PRT RUS SWE USA ZAF
+    eligibility/U changed vs V0 (1): MEX
+    ineligible (0): -
+    JPN top1_income_share: n=75 eligible=True u_shape=False first 1950=0.105 trough 1976=0.098 last 2024=0.127 change_since_1980(nearest 1980)=+0.022 | rank 2024: 22/46
+
+== V4: data_quality proxy (strong): drop data_quality <= 1 ==
+  [M] V4 top1_wealth_share                                               eligible= 8 (ineligible=38) U= 5 share=0.625 wilson95=[0.306, 0.863] p(one-sided, H0 p=0.5)=0.3633
+  [A] V4 rise since 1980 > 0: top1_wealth_share                          eligible= 8 (ineligible=38) U= 6 share=0.750 wilson95=[0.409, 0.929] p(one-sided, H0 p=0.5)=0.1445
+    U-shape countries (5): ESP FRA GBR SWE USA
+    eligibility/U changed vs V0 (39): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE DNK EST FIN GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NOR NZL POL PRT RUS SAU SVK SVN TUR ZAF
+    ineligible (38): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE EST FIN GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NOR NZL POL PRT RUS SAU SVK SVN TUR ZAF
+    JPN top1_wealth_share: no years left
+  [M] V4 top1_income_share                                               eligible=37 (ineligible= 9) U=21 share=0.568 wilson95=[0.409, 0.713] p(one-sided, H0 p=0.5)=0.2557
+  [A] V4 rise since 1980 > 0: top1_income_share                          eligible=37 (ineligible= 9) U=32 share=0.865 wilson95=[0.720, 0.941] p(one-sided, H0 p=0.5)=0.0000
+    U-shape countries (21): AUS BEL CAN DEU DNK FIN FRA GBR HUN IND IRL ITA NLD NOR NZL POL PRT RUS SWE USA ZAF
+    eligibility/U changed vs V0 (9): BRA COL CRI ISL LTU LVA MEX SAU SVN
+    ineligible (9): BRA COL CRI ISL LTU LVA MEX SAU SVN
+    JPN top1_income_share: n=36 eligible=True u_shape=False first 1950=0.105 trough 1976=0.098 last 2013=0.127 change_since_1980(nearest 1979)=+0.022 | rank 2024: None/6
+
+== V5: V2 + V3 ==
+  [M] V5 top1_wealth_share                                               eligible= 8 (ineligible=38) U= 4 share=0.500 wilson95=[0.215, 0.785] p(one-sided, H0 p=0.5)=0.6367
+  [A] V5 rise since 1980 > 0: top1_wealth_share                          eligible= 8 (ineligible=38) U= 6 share=0.750 wilson95=[0.409, 0.929] p(one-sided, H0 p=0.5)=0.1445
+    U-shape countries (4): ESP FRA GBR SWE
+    eligibility/U changed vs V0 (40): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE DNK EST FIN GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NOR NZL POL PRT RUS SAU SVK SVN TUR USA ZAF
+    ineligible (38): ARG AUS AUT BEL BRA CAN CHE CHL CHN COL CRI CZE EST FIN GRC HUN IDN IND IRL ISL ISR ITA JPN KOR LTU LUX LVA MEX NOR NZL POL PRT RUS SAU SVK SVN TUR ZAF
+    JPN top1_wealth_share: no years left
+  [M] V5 top1_income_share                                               eligible=38 (ineligible= 8) U= 9 share=0.237 wilson95=[0.130, 0.392] p(one-sided, H0 p=0.5)=0.9998
+  [A] V5 rise since 1980 > 0: top1_income_share                          eligible=38 (ineligible= 8) U=31 share=0.816 wilson95=[0.666, 0.908] p(one-sided, H0 p=0.5)=0.0001
+    U-shape countries (9): AUS BEL CAN DEU FIN IND NOR NZL RUS
+    eligibility/U changed vs V0 (20): BRA COL DNK EST FRA GBR HUN IRL ISL ITA LTU LVA MEX NLD POL PRT SVN SWE USA ZAF
+    ineligible (8): BRA COL EST ISL LTU LVA MEX SVN
+    JPN top1_income_share: n=45 eligible=True u_shape=False first 1980=0.105 trough 1992=0.098 last 2024=0.127 change_since_1980(nearest 1980)=+0.022 | rank 2024: 22/46

@@ -122,3 +122,179 @@ def test_conversion_is_deterministic() -> None:
 def test_malformed_csv_fails_closed(payload: bytes) -> None:
     with pytest.raises(ValueError):
         wid.rows_from_csv(payload)
+
+
+# ---------------------------------------------------------------- metadata (WID_metadata_XX.csv)
+META_FIXTURE = (Path(__file__).parent / "fixtures" / "wid_metadata_sample.csv").read_bytes()
+
+
+def test_extract_metadata_csv_from_country_zip_fails_closed() -> None:
+    payload = make_zip({"WID_data_JP.csv": FIXTURE, "WID_metadata_JP.csv": META_FIXTURE})
+    assert wid.extract_metadata_csv(payload, "JP") == META_FIXTURE
+    with pytest.raises(ValueError, match="WID_metadata_JP.csv"):
+        wid.extract_metadata_csv(make_zip({"WID_data_JP.csv": FIXTURE}), "JP")
+    with pytest.raises(ValueError, match="not a zip"):
+        wid.extract_metadata_csv(b"country;variable\n", "JP")
+
+
+def test_metadata_rows_keep_selected_series_with_canonical_codes() -> None:
+    rows = wid.metadata_rows_from_csv(META_FIXTURE)
+    assert [(r["iso3"], r["variable"]) for r in rows] == [
+        ("JPN", "npopul999i"),
+        ("JPN", "shweal992j"),
+        ("JPN", "sptinc992j"),
+    ]
+    wealth = rows[1]
+    assert wealth["shortname"] == "Net personal wealth"
+    assert wealth["unit"] == "share"
+    assert str(wealth["source_text"]).startswith("Bajard, F.")
+    assert str(wealth["method"]).startswith("Before 1980, series is constructed")
+    assert wealth["avg_quality"] == 0.0
+    assert wealth["source"] == "wid_world"
+    assert rows[0]["avg_quality"] is None  # blank in the file
+    assert rows[2]["avg_quality"] == 1.3
+    assert '"Technical Note"' in str(rows[2]["source_text"])  # quoted field, doubled quotes
+
+
+def test_metadata_rows_are_deterministic() -> None:
+    assert wid.metadata_rows_from_csv(META_FIXTURE) == wid.metadata_rows_from_csv(META_FIXTURE)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"country,variable,age\nJP,sptincj992,992\n",  # comma separated
+        # a column added or renamed by WID must stop the stage, not silently pass
+        META_FIXTURE.replace(b";avg_quality", b";avg_quality;data_points", 1),
+        META_FIXTURE.replace(b";avg_quality", b";quality", 1),
+        META_FIXTURE.replace(b";1.3\n", b";high\n", 1),  # avg_quality not a number
+    ],
+)
+def test_metadata_malformed_fails_closed(payload: bytes) -> None:
+    with pytest.raises(ValueError):
+        wid.metadata_rows_from_csv(payload)
+
+
+def test_parse_method_by_year_and_before_clauses() -> None:
+    rows = wid.metadata_rows_from_csv(META_FIXTURE)
+    info = wid.parse_method(str(rows[2]["method"]))
+    assert info.by_year[1980] == "extrapolated distribution"
+    assert info.by_year[1981] == info.by_year[1983] == "survey + concept correction + tax data"
+    assert info.by_year[2023] == "extrapolated distribution using survey data"
+    assert 1979 not in info.by_year and 2024 not in info.by_year
+    assert info.trend_before == 1980 and info.long_run_before == 1886
+    wealth = wid.parse_method(str(rows[1]["method"]))
+    assert wealth.by_year == {} and wealth.trend_before == 1980 and wealth.long_run_before is None
+    empty = wid.parse_method("")
+    assert empty.by_year == {} and empty.trend_before is None and empty.long_run_before is None
+
+
+def test_parse_method_rejects_unparseable_summary_segment() -> None:
+    with pytest.raises(ValueError, match="segment"):
+        wid.parse_method(
+            "Summary of data construction by year (see source for details): 1980 survey."
+        )
+
+
+@pytest.mark.parametrize(
+    ("segment", "construction"),
+    [
+        ("survey + concept correction + tax data", "observed"),
+        ("survey + tax data", "observed"),
+        ("survey + imputed nonresponse", "observed"),
+        ("survey + concept correction + extrapolated nonresponse", "observed"),
+        ("survey + concept correction + interpolated tax data", "partial"),
+        ("interpolated survey + concept correction + tax data", "partial"),
+        ("extrapolated distribution + tax data", "partial"),
+        ("extrapolated distribution survey + tax data", "partial"),  # WID typo, seen in the raw
+        ("interpolated survey + concept correction + interpolated tax data", "imputed"),
+        ("extrapolated distribution", "imputed"),
+        ("extrapolated distribution using survey data", "imputed"),
+        ("extrapolated distribtion using survey data", "imputed"),  # WID typo, seen in the raw
+        ("interpolated", "imputed"),
+    ],
+)
+def test_classify_segment(segment: str, construction: str) -> None:
+    assert wid.classify_segment(segment) == construction
+
+
+def test_classify_segment_fails_closed_on_unknown_input() -> None:
+    with pytest.raises(ValueError, match="unknown"):
+        wid.classify_segment("administrative registers")
+
+
+def test_classify_year_precedence_and_unknown() -> None:
+    rows = wid.metadata_rows_from_csv(META_FIXTURE)
+    income = wid.parse_method(str(rows[2]["method"]))
+    assert wid.classify_year(income, 1982) == ("observed", "method_by_year")
+    assert wid.classify_year(income, 1984) == ("imputed", "method_by_year")
+    assert wid.classify_year(income, 1985) == ("partial", "method_by_year")
+    assert wid.classify_year(income, 1979) == ("imputed", "trend_before_1980")
+    assert wid.classify_year(income, 1850) == ("imputed", "long_run_before_1886")
+    assert wid.classify_year(income, 2024) == (None, None)  # after the documented range
+    wealth = wid.parse_method(str(rows[1]["method"]))
+    assert wid.classify_year(wealth, 1970) == ("imputed", "trend_before_1980")
+    assert wid.classify_year(wealth, 1980) == (None, None)
+    assert wid.classify_year(wid.parse_method(""), 2000) == (None, None)
+
+
+def test_data_point_rows_follow_years_present_in_shares() -> None:
+    shares, _ = wid.rows_from_csv(FIXTURE)  # JPN sptinc992j 2000, 2001; shweal992j 2000
+    shares.append({**shares[0], "year": 1979})  # shweal992j p90p100 1979
+    shares.append({**shares[0], "year": 1979, "percentile": "p99p100"})  # same year, 2nd pct
+    meta = wid.metadata_rows_from_csv(META_FIXTURE)
+    meta[2] = {
+        **meta[2],
+        "method": "Summary of data construction by year (see source for details): "
+        "2000: survey + tax data, 2001-2023: extrapolated distribution.",
+    }
+    points = wid.data_point_rows(shares, meta)
+    assert points == [
+        {
+            "iso3": "JPN",
+            "year": 1979,
+            "variable": "shweal992j",
+            "is_observed": False,
+            "construction": "imputed",
+            "basis": "trend_before_1980",
+            "method_segment": None,
+            "source": "wid_world",
+        },
+        {
+            "iso3": "JPN",
+            "year": 2000,
+            "variable": "shweal992j",
+            "is_observed": None,
+            "construction": None,
+            "basis": None,
+            "method_segment": None,
+            "source": "wid_world",
+        },
+        {
+            "iso3": "JPN",
+            "year": 2000,
+            "variable": "sptinc992j",
+            "is_observed": True,
+            "construction": "observed",
+            "basis": "method_by_year",
+            "method_segment": "survey + tax data",
+            "source": "wid_world",
+        },
+        {
+            "iso3": "JPN",
+            "year": 2001,
+            "variable": "sptinc992j",
+            "is_observed": False,
+            "construction": "imputed",
+            "basis": "method_by_year",
+            "method_segment": "extrapolated distribution",
+            "source": "wid_world",
+        },
+    ]
+
+
+def test_data_point_rows_without_metadata_row_are_unknown() -> None:
+    shares, _ = wid.rows_from_csv(FIXTURE)
+    points = wid.data_point_rows(shares, [])
+    assert {p["is_observed"] for p in points} == {None}
+    assert len(points) == 3  # (JPN, shweal992j, 2000), (JPN, sptinc992j, 2000), (…, 2001)
