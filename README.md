@@ -37,3 +37,9 @@ design/, docs/      設計・ADR・spec・方法論
 
 ## トラブルシュート
 - `ModuleNotFoundError: socioscope_core` が出て、`uv run python -v -c pass 2>&1 | grep pth` に `Skipping hidden .pth file` が出る場合: macOS の hidden フラグが `.venv` 配下に付いている（Python 3.13 は hidden な .pth を無視する）。`chflags -R nohidden .venv` か `rm -rf .venv && uv sync --all-packages` で直る。
+
+## ライセンス
+- **コード・ドキュメント**: MIT（`LICENSE`）。
+- **データ（`data/staged`, `data/marts`）**: 各出典のライセンスに従う派生物で、MIT の対象外。出典と条件は `design/data-sources.md` と `data/raw/manifest.jsonl` の `license` 列を正とする。
+  - World Bank WDI 由来: CC BY 4.0（出典表記）。
+  - WID.world 由来: **CC BY-NC-SA 4.0**（出典表記・非商用・同一ライセンス継承）。本プロジェクトは非商用の研究目的に限る。
