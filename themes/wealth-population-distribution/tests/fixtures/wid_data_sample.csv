@@ -1,0 +1,14 @@
+country;variable;percentile;year;value;age;pop;data_quality
+JP;sptincj992;p99p100;2000;0.0999;992;j;1
+JP;sptincj992;p90p100;2000;0.4;992;j;1
+JP;sptincj992;p0p50;2000;0.19;992;j;1
+JP;sptincj992;p50p90;2000;0.41;992;j;1
+JP;sptincj992;p99.9p100;2000;0.03;992;j;1
+JP;shwealj992;p99p100;2000;0.2462;992;j;0
+JP;shwealj992;p90p100;2000;0.58;992;j;0
+JP;npopuli999;p0p100;2000;126843000;999;i;5
+JP;npopuli999;p0p100;2001;127000000;999;i;
+JP;aptincj992;p0p100;2000;3000000;992;j;1
+JP;sptincj999;p99p100;2000;0.11;999;j;1
+JP;sptinci992;p99p100;2000;0.12;992;i;1
+JP;sptincj992;p99p100;2001;0.1012;992;j;4
