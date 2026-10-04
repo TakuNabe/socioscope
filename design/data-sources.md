@@ -13,7 +13,8 @@
 | World Bank WDI API | GDP 成長率、出生率、人口、Gini 等（国×年） | REST JSON（`api.worldbank.org/v2`） | CC BY 4.0 | **採用**（growth-fertility） |
 | World Inequality Database (WID.world) | 所得・資産の上位シェア、人口、長期系列 | 国別 zip（`bulk_download/WID_fulldataset_<ISO2>.zip`） | **CC BY-NC-SA 4.0**（サイト表記。CC BY 4.0 は未確認） | **採用**（wealth-population-distribution） |
 | UN World Population Prospects | 人口・年齢構成・出生率 | CSV / API | CC BY 3.0 IGO | 候補 |
-| OECD Data Explorer | 所得分配（IDD）、出生率 | SDMX API | OECD 利用規約 | 候補 |
+| OECD Data Explorer（SDMX REST） | 最高限界所得税率（Tax Database Table I.7）、公的社会支出 %GDP（SOCX）、税収 %GDP・相続税収 %GDP（Revenue Statistics） | SDMX REST CSV（`sdmx.oecd.org/public/rest/data/...?format=csvfilewithlabels`、鍵不要） | **OECD Terms & Conditions（2024-07-01 改定）: 出典表示で商用含め自由利用。OECD 発行物は CC BY 4.0**（確認 2026-10-04） | **採用**（wealth-population-distribution H2） |
+| OECD Data Explorer（IDD 等） | 所得分配（IDD）、出生率 | SDMX API | 同上 | 候補 |
 | Maddison Project / Penn World Table | 長期 GDP 系列 | Excel/CSV | 要確認 | 候補（戦後長期） |
 | Our World in Data | 整形済み系列（出典明記） | CSV / grapher API | CC BY | 候補（検証用） |
 | e-Stat（政府統計の総合窓口） | 国民生活基礎調査 所得票（所得階級×配偶者の有無・児童のいる世帯） | 統計表ファイル直接ダウンロード（`stat-search/file-download?statInfId=…&fileKind=1`、appId 不要） | **政府標準利用規約（第2.0版）＝CC BY 4.0 互換**（確認 2026-10-04） | **採用**（growth-fertility H3） |
@@ -65,6 +66,29 @@
   - **有配偶率の定義**: 第102表は「15 歳以上の有業人員」の配偶者の有無であり、無業者（専業主婦・学生・無職）を含まない。配偶者不詳は分母から外す（`denominator = 配偶者あり + 配偶者なし`）。年齢調整なし（所得は年齢と相関するため、年齢構成の差を含む粗い指標）。値は人員 10 万対の重みであり実数ではない。
   - **児童のいる世帯**: 18 歳未満の未婚の者がいる世帯。世帯所得階級別の「児童のいる世帯／全世帯」は子ども「数」ではなく有無の割合。母子世帯（2013 表では「母子世帯」列、他年は「高齢者世帯以外」の内訳）は別列で staged に保持。
   - 第025表のヘッダは年により複数行に分かれる（2013 年は「（再掲）児童のいる世帯」が 1 セル）。stage はヘッダ行を列ごとに連結して「児童のいる世帯」「母子世帯」「総数」を一意に特定し、見つからなければ fail-closed。
+
+### OECD Data Explorer（SDMX REST API）— 税制・社会支出（wealth-population-distribution H2）
+- URL / API:
+  - データ: `https://sdmx.oecd.org/public/rest/data/<agency>,<dataflow>,<version>/<key>?format=csvfilewithlabels`。**API キー不要**。`<key>` は dataflow の次元順に `.` 区切り（REF_AREA は空＝全国）。構造: `.../dataflow/<agency>/<dataflow>/<version>?references=all`、期間: `.../availableconstraint/<agency>,<dataflow>,<version>/all`。
+  - 採用 dataflow（2026-10-04 に構造とデータ断片を取得して確認。ID は dataflow 一覧 `rest/dataflow/all` 1,549 件から特定）:
+    | staged 名 | dataflow | key（REF_AREA を除く） | 期間 | 内容 |
+    |---|---|---|---|---|
+    | `top_pit_rate` | `OECD.CTP.TPS,DSD_TAX_PIT@DF_PIT_TOP_EARN_THRESH,1.0` | `.A._Z.TS_PIT.PT_WG_EARN_G.S13._Z._Z._Z._Z._Z._Z` | **2000–2025** | 最高限界個人所得税率（中央＋地方の合算、Tax Database Table I.7 の `TS_PIT`）、% |
+    | `social_expenditure_gdp` | `OECD.ELS.SPD,DSD_SOCX_AGG@DF_SOCX_AGG,1.0` | `.A.SOCX.PT_B1GQ.ES10._T._T._Z` | 1980–2024 | 公的社会支出（現金＋現物、全プログラム）、%GDP |
+    | `tax_revenue_gdp` | `OECD.CTP.TPS,DSD_REV_COMP_OECD@DF_RSOECD,2.0` | `.TAX_REV.S13._T._T.PT_B1GQ.A` | 1965–2024 | 一般政府 総税収、%GDP |
+    | `inheritance_tax_rev_gdp` | 同上 | `.TAX_REV.S13.T_4300._T.PT_B1GQ.A` | 1965–2024 | 相続・遺産・贈与税収（4300）、%GDP。相続税「有無」の dataflow は SDMX に無いため税収ベースの代理 |
+  - 当初候補の `DSD_TAX_WAGES_PIT@DF_TAX_PIT` / `DSD_TABLE_I7` / `DSD_SOCX_AGG@DF_SOCX_AGG`（これのみ一致）/ `DSD_REV@DF_REVOECD` は、`DF_SOCX_AGG` を除き存在しなかった。Revenue Statistics の国別 dataflow（`DSD_REV_OECD@DF_REV<ISO3>`）ではなく比較表 `DF_RSOECD` を使う（1 リクエストで全国）。
+  - Table I.7 の 1981–1999 の歴史系列は oecd.org 上の Excel（`/content/dam/oecd/...`）にあるが、**robots.txt で `/content/dam/oecd/` が Disallow** のため取得しない。最高税率は 2000 年以降のみ。
+  - robots.txt（2026-10-04）: `www.oecd.org` は `/content/dam/oecd/` と `/adobe/dynamicmedia/deliver/` のみ Disallow。`sdmx.oecd.org/robots.txt` は 404（制限なし）。
+- 対象指標・粒度: 国（OECD 加盟 38 か国の ISO3）× 年。dataflow には集計（`OECD`, `OECD_REP`, `FEDOECD`, `UNIOECD`）や非加盟国（`BGR`, `HRV`, `PER`, `ROU`）も含まれるが、stage で `oecd.OECD_MEMBERS` の 38 か国に限定する。
+- ライセンス・利用規約（確認日 2026-10-04、`https://www.oecd.org/en/about/terms-conditions.html`、「Last updated on 1 July 2024」）: **Data 節**「you can extract from, download, copy, adapt, print, distribute, share and embed Data for any purpose, even for commercial use」。条件は出典表示（`OECD (year), (dataset name), (data source) DOI or URL (accessed on (date))` 形式）と、再配布時に同じ出典表示義務を継承させること。「CC BY 4.0」の明示は **2024-07-01 以降に公表された OECD 著作物（Written Content）**に対するもので、データ節自体は上記の独自条件（実質 CC BY 相当）。第三者所有データが含まれ得る旨の注意あり（採用 3 dataflow は OECD 自身の統計）。API 節: 「as-is」、レート・量の制限を OECD が任意に課せる、最新版 API を使うこと。raw はコミットしない（既定どおり）。staged/marts の再配布時の出典表記: 「OECD (2026), OECD Tax Database / Social Expenditure Database (SOCX) / Revenue Statistics, https://sdmx.oecd.org (accessed on 2026-10-04)」。
+- 取得方法（adapter 名、レート制限）: `theme_wealth_population_distribution.oecd`（URL 組み立て・CSV→行の純粋変換、Pydantic で STRUCTURE_ID と全次元コードを照合し fail-closed）＋ `pipeline._fetch_oecd` / `_stage_oecd`（`HttpxFetcher`）。**4 リクエスト（計 ~2.3MB）**。`socioscope run wealth-population-distribution fetch --only oecd` で WID の再取得を避けられる。公開レート制限なし（規約上 OECD が任意に制限可）。再取得は年 1 回程度。
+- 既知の欠損・断絶・定義変更:
+  - `top_pit_rate` は 2000 年以降のみ（上記）。H2 の 1980 起点の長期差分には使えない。
+  - `social_expenditure_gdp` は 1980 年時点で 23 か国。遅れて始まる国: MEX 1985, CHL 1986, CZE/ISL/KOR/POL 1990, LVA 1994, ISR/SVK/SVN 1995, LTU 1996, EST/HUN 1999, COL 2010, CRI 2011。2023 以降は暫定で欠損あり。
+  - `tax_revenue_gdp` / `inheritance_tax_rev_gdp` は 1980 年時点で 26 か国。遅れて始まる国: CHL/COL/CRI 1990, HUN/POL 1991, CZE 1993, EST/ISR/LTU/LVA/SVK/SVN 1995。
+  - `OBS_VALUE` 空（`OBS_STATUS` M/L 等）は行ごと落とす（補完しない）。staged に `obs_status` 列を残す。
+  - 最高税率は賃金所得に対する法定税率で、資本所得・配当の税率ではない。社会支出・税収は GDP 比で、GDP 改定の影響を受ける。
 
 ## 記録テンプレート（ソース採用時）
 ```

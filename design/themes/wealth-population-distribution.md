@@ -18,6 +18,11 @@
 ## データ候補
 WID.world（長期系列の主軸）、World Bank（Gini）、OECD IDD、UN WPP、日本: 国民生活基礎調査・全国家計構造調査・国税庁統計（`design/data-sources.md`）。
 
+### H2 の制度変数（採用 2026-10-04、OECD SDMX REST）
+- 最高限界個人所得税率 `top_pit_rate`（Tax Database Table I.7、**2000 年以降のみ**）、公的社会支出 %GDP `social_expenditure_gdp`（SOCX、1980–）、総税収 %GDP `tax_revenue_gdp`（Revenue Statistics、1965–）、補助: 相続・遺産・贈与税収 %GDP `inheritance_tax_rev_gdp`（相続税「有無」の系列は無いため税収ベースの代理）。
+- **カバレッジ**: OECD 加盟 38 か国のみ。WID mart の 46 か国のうち非 OECD G20 8 か国（AR BR CN IN ID RU SA ZA）は H2 分析の対象外。mart: `marts/wealth_institutions_panel`。
+- H2 の事前登録仕様（分析前に固定、詳細は `analysis/a20261004_h2_institutions.py` docstring）: (a) 国横断の長期差分 OLS（HC3）— A1: 1980→T で Δsocx, Δtaxrev；A2: 2000→T で Δpit, Δsocx, Δtaxrev；(b) 国＋年 FE パネル（国クラスタ SE、ラグ 0/5 年）；(c) R²；頑健性: 1990 起点、top10、米国除外、WID data_quality 4–5 の国除外。**関連の分析**であり因果は主張しない。
+
 ## 分析の段階
 1. 記述: 国×年パネルで指標の長期推移を可視化（世界地図・小多重図）。
 2. 比較: 国をクラスタリング（軌跡の形）。日本の位置づけ。
