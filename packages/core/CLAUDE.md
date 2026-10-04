@@ -33,4 +33,4 @@ tests/
 `cli.py` は `importlib.metadata.entry_points(group="socioscope.themes")` で発見し、`Context`（実 adapter の束）を渡して stage を実行する。
 
 ## ツールチェーン
-ルートで `uv sync --all-packages` / `make check`。個別: `uv run pytest packages/core/tests -q`。
+ルートで `make sync` / `make check`。個別: `uv run pytest packages/core/tests -q`。

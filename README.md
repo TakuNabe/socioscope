@@ -10,9 +10,10 @@
 
 ## セットアップ
 ```bash
-uv sync --all-packages
+make sync              # uv sync --all-packages（venv は `venv/`、`.venv` は symlink。ADR 0005）
 cp .env.example .env   # ANTHROPIC_API_KEY（LLM 構造化を使う場合のみ）
 make check             # lint / type / test
+make doctor            # import できない時の診断
 ```
 
 ## 使い方
@@ -36,7 +37,7 @@ design/, docs/      設計・ADR・spec・方法論
 設計の詳細は `CLAUDE.md` と `design/overview.md`、決定は `docs/adrs/` を参照。
 
 ## トラブルシュート
-- `ModuleNotFoundError: socioscope_core` が出て、`uv run python -v -c pass 2>&1 | grep pth` に `Skipping hidden .pth file` が出る場合: macOS の hidden フラグが `.venv` 配下に付いている（Python 3.13 は hidden な .pth を無視する）。`chflags -R nohidden .venv` か `rm -rf .venv && uv sync --all-packages` で直る。
+- `ModuleNotFoundError: socioscope_core`（`uv run python -v -c pass 2>&1 | grep pth` に `Skipping hidden .pth file`）: macOS で `~/Desktop`・`~/Documents` が iCloud Drive 同期の対象だと、ドット始まりの項目（`.venv` を含む）とその配下に `UF_HIDDEN` が付き、Python 3.13 は hidden な `.pth` を無視する。本リポジトリは venv を **`venv/`（ドット名でない）** に置くことで回避している（ADR 0005）。`make doctor` で診断、`make sync` で復旧。Claude Code 外の素の `uv run` も `.venv -> venv` symlink 経由で同じ環境を使う。実体の `.venv/` が残っている場合は `make sync` が symlink に置き換える。根本的には iCloud 同期外（例 `~/code`）にリポジトリを置くのが最善。
 
 ## ライセンス
 - **コード・ドキュメント**: MIT（`LICENSE`）。

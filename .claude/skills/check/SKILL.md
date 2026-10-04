@@ -14,6 +14,6 @@ uv run ruff check .
 uv run mypy packages/core/src themes/*/src
 uv run pytest
 ```
-- `uv` 未同期なら `uv sync --all-packages` を先に。
+- `uv` 未同期なら `make sync` を先に（venv は `venv/`、ADR 0005）。`ModuleNotFoundError: socioscope_core` が出たら `make doctor`。
 - format 差分は `uv run ruff format .` で直してよい（適用前に一言添える）。
 - 失敗は「どのコマンド・どのファイル・なぜ」を要約。全 green なら簡潔に合格を報告。

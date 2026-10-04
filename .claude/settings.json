@@ -1,7 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
-    "PATH": "${HOME}/.local/bin:/opt/homebrew/bin:${PATH}"
+    "PATH": "${HOME}/.local/bin:/opt/homebrew/bin:${PATH}",
+    "UV_PROJECT_ENVIRONMENT": "venv"
   },
   "permissions": {
     "allow": [
