@@ -9,6 +9,8 @@ dependencies = [
   "polars>=1.0",
   "pyarrow>=17",
   "matplotlib>=3.9",
+  "numpy>=2.0",
+  "statsmodels>=0.14",
 ]
 
 [project.entry-points."socioscope.themes"]

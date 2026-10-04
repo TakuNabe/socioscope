@@ -30,7 +30,7 @@ def discover_themes() -> dict[str, Pipeline]:
     return found
 
 
-def build_context(settings: Settings) -> Context:
+def build_context(settings: Settings, sources: frozenset[str] | None = None) -> Context:
     data = settings.data_dir
     key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else None
     return Context(
@@ -40,6 +40,7 @@ def build_context(settings: Settings) -> Context:
         structurer=ClaudeStructurer(
             cache=JsonlLlmCache(data / "llm_cache"), model=settings.llm_model, api_key=key
         ),
+        sources=sources,
     )
 
 
@@ -52,13 +53,22 @@ def themes() -> None:
 
 
 @app.command()
-def run(theme: str, stage: Stage) -> None:
+def run(
+    theme: str,
+    stage: Stage,
+    only: list[str] | None = typer.Option(  # noqa: B008
+        None,
+        "--only",
+        help="Restrict the stage to these raw-store sources (e.g. --only oecd). Repeatable.",
+    ),
+) -> None:
     """Run one stage (fetch | stage | mart) of a theme."""
     pipelines = discover_themes()
     if theme not in pipelines:
         typer.echo(f"unknown theme '{theme}'. known: {', '.join(sorted(pipelines))}", err=True)
         raise typer.Exit(2)
-    result = pipelines[theme].run(stage, build_context(Settings()))
+    sources = frozenset(only) if only else None
+    result = pipelines[theme].run(stage, build_context(Settings(), sources))
     for w in result.written:
         typer.echo(f"written  {w}")
     for s in result.skipped:
