@@ -9,13 +9,14 @@ from theme_wealth_population_distribution.pipeline import build_panel
 from theme_wealth_population_distribution.wiring import PIPELINE
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "wid_data_sample.csv").read_bytes()
+META_FIXTURE = (Path(__file__).parent / "fixtures" / "wid_metadata_sample.csv").read_bytes()
 
 
-def country_zip(iso2: str, csv: bytes) -> bytes:
+def country_zip(iso2: str, csv: bytes, meta: bytes = META_FIXTURE) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(f"WID_data_{iso2}.csv", csv)
-        zf.writestr(f"WID_metadata_{iso2}.csv", b"meta")
+        zf.writestr(f"WID_metadata_{iso2}.csv", meta)
     return buf.getvalue()
 
 
@@ -41,12 +42,12 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
     ctx = make_ctx(
         {
             wid.country_zip_url("JP"): country_zip("JP", FIXTURE),
-            wid.country_zip_url("FR"): country_zip("FR", fr),
+            wid.country_zip_url("FR"): country_zip("FR", fr, META_FIXTURE.replace(b"JP;", b"FR;")),
         }
     )
     PIPELINE.run(Stage.FETCH, ctx)
     staged = PIPELINE.run(Stage.STAGE, ctx)
-    assert staged.written == ("staged/wid/population", "staged/wid/top_shares")
+    assert staged.written[:2] == ("staged/wid/population", "staged/wid/top_shares")
     assert len(staged.skipped) == len(wid.COUNTRIES) - 2
     shares = ctx.tables.read_table("staged/wid/top_shares")
     assert [r["iso3"] for r in shares] == ["FRA"] * 7 + ["JPN"] * 7
@@ -70,6 +71,8 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
         "top10_wealth_share": 0.58,
         "population": 126843000.0,
         "source": "wid_world",
+        "top1_income_observed": False,  # fixture method: 1986-2023 extrapolated distribution
+        "top1_wealth_observed": None,  # fixture method says nothing about 1980+
     }
     assert panel[3]["top1_income_share"] == 0.1012 and panel[3]["top10_wealth_share"] is None
 
@@ -112,6 +115,8 @@ def test_build_panel_keeps_missing_as_none() -> None:
             "top10_wealth_share": None,
             "population": None,
             "source": "wid_world",
+            "top1_income_observed": None,
+            "top1_wealth_observed": None,
         },
         {
             "iso3": "JPN",
@@ -123,5 +128,96 @@ def test_build_panel_keeps_missing_as_none() -> None:
             "top10_wealth_share": None,
             "population": 100.0,
             "source": "wid_world",
+            "top1_income_observed": None,
+            "top1_wealth_observed": None,
         },
+    ]
+
+
+# ---------------------------------------------------------------- metadata / data_points / observed
+def test_stage_writes_metadata_and_data_points_and_mart_gets_observed_flags() -> None:
+    data = (
+        FIXTURE
+        + b"JP;sptincj992;p99p100;1979;0.09;992;j;4\n"
+        + b"JP;shwealj992;p99p100;1979;0.2;992;j;0\n"
+    )
+    meta = META_FIXTURE.replace(
+        b"1986-2023: extrapolated distribution using survey data",
+        b"1986-2000: survey + tax data, 2001-2023: extrapolated distribution using survey data",
+    )
+    ctx = make_ctx({wid.country_zip_url("JP"): country_zip("JP", data, meta)})
+    PIPELINE.run(Stage.FETCH, ctx)
+    staged = PIPELINE.run(Stage.STAGE, ctx)
+    assert staged.written == (
+        "staged/wid/population",
+        "staged/wid/top_shares",
+        "staged/wid/metadata",
+        "staged/wid/data_points",
+    )
+    meta_rows = ctx.tables.read_table("staged/wid/metadata")
+    assert [(m["iso3"], m["variable"]) for m in meta_rows] == [
+        ("JPN", "npopul999i"),
+        ("JPN", "shweal992j"),
+        ("JPN", "sptinc992j"),
+    ]
+    points = ctx.tables.read_table("staged/wid/data_points")
+    assert [(p["variable"], p["year"], p["is_observed"]) for p in points] == [
+        ("shweal992j", 1979, False),
+        ("shweal992j", 2000, None),
+        ("sptinc992j", 1979, False),
+        ("sptinc992j", 2000, True),
+        ("sptinc992j", 2001, False),
+    ]
+
+    PIPELINE.run(Stage.MART, ctx)
+    panel = ctx.tables.read_table("marts/wealth_population_panel")
+    assert [(p["year"], p["top1_income_observed"], p["top1_wealth_observed"]) for p in panel] == [
+        (1979, False, False),
+        (2000, True, None),
+        (2001, False, None),
+    ]
+    # existing columns unchanged
+    assert panel[1]["top1_income_share"] == 0.0999 and panel[1]["population"] == 126843000.0
+
+
+def test_mart_without_data_points_table_keeps_observed_flags_null() -> None:
+    ctx = make_ctx({})
+    shares, population = wid.rows_from_csv(FIXTURE)
+    ctx.tables.write_table("staged/wid/top_shares", shares)
+    ctx.tables.write_table("staged/wid/population", population)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == ("marts/wealth_population_panel",)
+    assert "staged/wid/data_points" in " ".join(result.notes)
+    panel = ctx.tables.read_table("marts/wealth_population_panel")
+    assert all(
+        p["top1_income_observed"] is None and p["top1_wealth_observed"] is None for p in panel
+    )
+
+
+def test_build_panel_observed_columns_default_to_none_and_keep_column_order() -> None:
+    share = {
+        "iso3": "JPN",
+        "year": 2000,
+        "variable": "sptinc992j",
+        "percentile": "p99p100",
+        "value": 0.1,
+    }
+    panel = build_panel([share], [])
+    assert panel[0]["top1_income_observed"] is None and panel[0]["top1_wealth_observed"] is None
+    panel = build_panel(
+        [share], [], [{"iso3": "JPN", "year": 2000, "variable": "sptinc992j", "is_observed": True}]
+    )
+    assert panel[0]["top1_income_observed"] is True and panel[0]["top1_wealth_observed"] is None
+    assert list(panel[0]) == [
+        "iso3",
+        "year",
+        "top1_income_share",
+        "top10_income_share",
+        "bottom50_income_share",
+        "top1_wealth_share",
+        "top10_wealth_share",
+        "population",
+        "source",
+        "top1_income_observed",
+        "top1_wealth_observed",
     ]
