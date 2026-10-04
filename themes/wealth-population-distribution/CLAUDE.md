@@ -10,7 +10,7 @@ src/theme_wealth_population_distribution/
   oecd.py                OECD SDMX REST の URL 組み立て（dataflow＋key）、CSV → 行（STRUCTURE_ID・全次元コードを照合、fail-closed）、OECD_MEMBERS（38）
   pipeline.py            fetch / stage / mart（Port 経由。I/O はここだけ）。OECD は _fetch_oecd / _stage_oecd / _mart_institutions に分離
   wiring.py              PIPELINE（entry point）
-  analysis/              report 用スクリプト（決定的、seed 固定）: a20261004_h1_ushape.py（H1）、a20261004_h1b_observed_only.py（H1b）、a20261005_h1c_quality_corrected.py（H1c: data_quality の向きを正した感度分析＋品質ヒートマップ）、a20261004_h2_institutions.py（H2）
+  analysis/              report 用スクリプト（決定的、seed 固定）: a20261004_h1_ushape.py（H1）、a20261004_h1b_observed_only.py（H1b）、a20261005_h1c_quality_corrected.py（H1c: data_quality の向きを正した感度分析＋品質ヒートマップ）、a20261004_h2_institutions.py（H2）、s20261005_summary.py（総括: H1/H1b/H1c/H2 を同じ純粋関数から再計算して日本語の一般向け図 14 枚を `reports/figures/summary/` に出力。日本語フォントは Hiragino 等を自動検出）
 tests/                   fixtures/wid_data_sample.csv, wid_metadata_sample.csv（合成の数行）、fixtures/oecd_*_sample.csv（実レスポンスの JPN 数行）＋ Fake による状態テスト
 ```
 
@@ -18,6 +18,7 @@ tests/                   fixtures/wid_data_sample.csv, wid_metadata_sample.csv�
 WID.world を採用し fetch/stage/mart 実装済み（ライセンスは **CC BY-NC-SA 4.0** 扱い、`design/data-sources.md` 参照）。
 OECD SDMX（最高税率・社会支出・税収・相続税収）を H2 用に採用し fetch/stage/mart 実装済み（OECD Terms & Conditions 2024、出典表示で自由利用）。
 H1 report: `reports/2026-10-04-h1-ushape.md`（追補: H1b `2026-10-04-h1b-observed-only.md` 観測年のみ、H1c `2026-10-05-h1c-quality-corrected.md` data_quality 向き訂正）。H2 report（限定・関連のみ）: `reports/2026-10-04-h2-institutions.md`。
+**総括（一般向け・日本語、全レポートの要約＋図 14 枚）**: `reports/2026-10-05-summary-wealth-population-distribution.md`（`analysis/s20261005_summary.py`、数値は元レポートの stdout と一致）。
 World Bank Gini、UN WPP 等は未接続。
 
 ## 実行
