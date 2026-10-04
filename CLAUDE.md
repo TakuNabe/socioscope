@@ -10,7 +10,7 @@
 - 全体像・目的・原則: `design/overview.md`
 - データソース方針・利用規約: `design/data-sources.md`
 - テーマ別の問い・仮説・指標: `design/themes/<theme>.md`
-- アーキテクチャ決定記録: `docs/adrs/`（0001 モノレポ構成 / 0002 データ保存 / 0003 LLM 構造化 / 0004 自動化ハーネス）
+- アーキテクチャ決定記録: `docs/adrs/`（0001 モノレポ構成 / 0002 データ保存 / 0003 LLM 構造化 / 0004 自動化ハーネス / 0005 venv 配置 `venv/`）
 - 分析の方法論・チェックリスト: `docs/methodology/`
 - 実装計画: `docs/specs/<feature>.md` ＋ `docs/specs/<feature>.plan.yaml`
 
