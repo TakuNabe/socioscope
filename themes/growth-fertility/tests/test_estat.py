@@ -132,3 +132,97 @@ def test_unexpected_numeric_cell_fails_closed() -> None:
     bad = TS.decode("cp932").replace("0.5,…,0.6", "abc,…,0.6").encode("cp932")
     with pytest.raises(ValueError, match="numeric"):
         estat.parse_income_dist_ts(bad, population="with_children")
+
+
+# -------------------------------------- 就業構造基本調査 第40表 (xlsx, 配偶関係×年齢×所得)
+
+SHUGYO = (FIXTURES / "estat_shugyo_marital_age_income.xlsx").read_bytes()
+SHUGYO_TABLE = next(t for t in estat.TABLES if t.key == "shugyo_marital_age_income_2022")
+
+
+def test_shugyo_table_is_excel_download_without_app_id() -> None:
+    assert SHUGYO_TABLE.url == (
+        "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000040077301&fileKind=0"
+    )
+    assert SHUGYO_TABLE.raw_name == "shugyo_marital_age_income_2022.xlsx"
+    assert SHUGYO_TABLE.source == "estat_shugyo"
+    assert MARITAL_TABLE.source == "estat_kiso" and MARITAL_TABLE.raw_name.endswith(".csv")
+    assert MARITAL_TABLE.url.endswith("fileKind=1")
+
+
+@pytest.mark.parametrize(
+    ("label", "code", "lower", "upper"),
+    [
+        ("00_総数", "total", None, None),
+        ("01_15～19歳", "15-19", 15, 20),
+        ("03_25～29歳", "25-29", 25, 30),
+        ("15_85歳以上", "85-", 85, None),
+    ],
+)
+def test_parse_age_class(label: str, code: str, lower: int | None, upper: int | None) -> None:
+    ac = estat.parse_age_class(label)
+    assert ac is not None
+    assert (ac.code, ac.lower, ac.upper) == (code, lower, upper)
+    assert estat.parse_age_class("0_総数") is not None
+    assert estat.parse_age_class("1_男") is None
+
+
+@pytest.mark.parametrize(
+    ("label", "code", "lower", "upper"),
+    [
+        ("00_総数", "total", None, None),
+        ("01_50万円未満", "0-50", 0, 500_000),
+        ("02_50～99万円", "50-100", 500_000, 1_000_000),  # 99 means '< 100': upper = hi + 1
+        ("14_1000～1249万円", "1000-1250", 10_000_000, 12_500_000),
+        ("16_1500万円以上", "1500-", 15_000_000, None),
+    ],
+)
+def test_parse_income_class_shugyo(
+    label: str, code: str, lower: int | None, upper: int | None
+) -> None:
+    ic = estat.parse_income_class_shugyo(label)
+    assert ic is not None
+    assert (ic.code, ic.lower_yen, ic.upper_yen) == (code, lower, upper)
+
+
+def test_xlsx_rows_reads_shared_strings_and_numbers() -> None:
+    rows = estat.xlsx_rows(SHUGYO)
+    assert rows[1][1].startswith("第４０表")
+    assert rows[9][2] == "00_全国" and rows[9][13] == "67060400"  # first data row: 総数/総数
+    with pytest.raises(ValueError, match="not an xlsx"):
+        estat.xlsx_rows(MARITAL)
+
+
+def test_shugyo_rows_keep_status_total_and_education_total_only() -> None:
+    rows = estat.shugyo_marital_age_income_rows(SHUGYO, SHUGYO_TABLE)
+    # fixture: 2 sexes x 2 marital x 3 ages x 4 income classes, 従業上の地位 = 総数 only
+    assert len(rows) == 48
+    assert {r["sex"] for r in rows} == {"total", "male"}
+    assert {r["marital"] for r in rows} == {"total", "never_married"}
+    assert all(
+        r["survey_year"] == 2022
+        and r["year"] == 2022
+        and r["source"] == "estat_shugyo"
+        and r["stat_inf_id"] == "000040077301"
+        for r in rows
+    )
+    by = {(r["sex"], r["marital"], r["age_class"], r["income_class"]): r for r in rows}
+    assert by[("male", "total", "25-29", "total")]["persons"] == 2_928_900
+    assert by[("male", "never_married", "25-29", "total")]["persons"] == 2_200_100
+    r = by[("male", "never_married", "25-29", "0-50")]
+    assert r["persons"] == 44_800 and r["age_lower"] == 25 and r["age_upper"] == 30
+    assert r["income_class_lower_yen"] == 0 and r["income_class_upper_yen"] == 500_000
+    r = by[("male", "never_married", "85-", "1500-")]
+    assert r["persons"] == 0.0  # '-' = none
+    assert r["age_upper"] is None and r["income_class_upper_yen"] is None
+    assert by[("total", "total", "total", "total")]["persons"] == 67_060_400
+    assert rows == estat.shugyo_marital_age_income_rows(SHUGYO, SHUGYO_TABLE)
+
+
+def test_shugyo_wrong_table_fails_closed() -> None:
+    with pytest.raises(ValueError, match="not an xlsx"):
+        estat.parse_shugyo_marital_age_income(HH_TYPE)
+    with pytest.raises(ValueError, match="not a 就業構造基本調査"):
+        estat.shugyo_marital_age_income_rows(SHUGYO, MARITAL_TABLE)
+    with pytest.raises(ValueError, match="not an income-distribution"):
+        estat.income_dist_rows(SHUGYO, SHUGYO_TABLE)

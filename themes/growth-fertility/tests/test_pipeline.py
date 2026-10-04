@@ -91,20 +91,24 @@ ESTAT_FIXTURE_BY_KIND = {
     ).read_bytes(),
     estat.TableKind.WORKERS_MARITAL: (FIXTURES / "estat_workers_marital_income.csv").read_bytes(),
     estat.TableKind.HH_TYPE: (FIXTURES / "estat_hh_type_income.csv").read_bytes(),
+    estat.TableKind.SHUGYO_MARITAL_AGE_INCOME: (
+        FIXTURES / "estat_shugyo_marital_age_income.xlsx"
+    ).read_bytes(),
 }
 
 
 def estat_responses(tables: tuple[estat.Table, ...] = estat.TABLES) -> dict[str, bytes]:
-    return {estat.file_download_url(t.stat_inf_id): ESTAT_FIXTURE_BY_KIND[t.kind] for t in tables}
+    return {t.url: ESTAT_FIXTURE_BY_KIND[t.kind] for t in tables}
 
 
-def test_fetch_stores_estat_csvs_with_license() -> None:
+def test_fetch_stores_estat_files_with_license() -> None:
     ctx = make_ctx(estat_responses())
     result = PIPELINE.run(Stage.FETCH, ctx)
     assert "growth-fertility/estat_kiso/workers_marital_income_2025.csv" in result.written
-    assert len([w for w in result.written if "/estat_kiso/" in w]) == len(estat.TABLES)
+    assert "growth-fertility/estat_shugyo/shugyo_marital_age_income_2022.xlsx" in result.written
+    assert len([w for w in result.written if "/estat_kiso/" in w]) == len(estat.TABLES) - 1
     assert len(result.skipped) == len(wb.INDICATORS) + 1  # World Bank had no fake responses
-    recs = [r for r in ctx.raw.records() if r.source == "estat_kiso"]
+    recs = [r for r in ctx.raw.records() if r.source in {"estat_kiso", "estat_shugyo"}]
     assert len(recs) == len(estat.TABLES)
     assert all("政府標準利用規約" in r.license and "CC BY 4.0" in r.license for r in recs)
     assert all("appId" not in r.url for r in recs)
@@ -115,8 +119,12 @@ def test_stage_estat_concatenates_waves_and_reports_missing_ones() -> None:
     ctx = make_ctx(estat_responses(present))
     PIPELINE.run(Stage.FETCH, ctx)
     result = PIPELINE.run(Stage.STAGE, ctx)
-    assert set(result.written) == set(pipeline.ESTAT_TABLES.values())
-    assert sum("raw missing" in s for s in result.skipped if "income_" in s) == 6  # 2016/19/22 ×2
+    assert set(result.written) == set(pipeline.ESTAT_TABLES.values()) - {
+        "staged/estat/shugyo_marital_age_income"
+    }
+    # kiso 2016/19/22 × 2 kinds + the shugyo 2022 table (its key also contains "income_")
+    assert sum("raw missing" in s for s in result.skipped if "income_" in s) == 7
+    assert "staged/estat/shugyo_marital_age_income" not in result.written
     marital = ctx.tables.read_table("staged/estat/kiso_workers_marital_income")
     assert sorted({int(str(r["survey_year"])) for r in marital}) == [2013, 2025]
     assert {r["source"] for r in marital} == {"estat_kiso"}
@@ -137,7 +145,7 @@ def test_mart_jp_income_class_fertility_from_staged() -> None:
     PIPELINE.run(Stage.FETCH, ctx)
     PIPELINE.run(Stage.STAGE, ctx)
     result = PIPELINE.run(Stage.MART, ctx)
-    assert result.written == (pipeline.JP_MART,)  # no WB staged -> no WB panel
+    assert result.written == (pipeline.JP_MART, pipeline.JP_AGE_MART)  # no WB -> no WB panel
     rows = ctx.tables.read_table(pipeline.JP_MART)
     assert set(rows[0]) == {
         "survey",
@@ -161,6 +169,85 @@ def test_mart_jp_income_class_fertility_from_staged() -> None:
     # the stage fixture is the same CSV for both ts tables, so both populations exist
     assert ("children_household_share_pct", 2025, None, "2000-") in by
     assert ("household_share_pct", 2025, None, "2000-") in by
+
+
+def test_mart_jp_income_age_marital_from_staged_shugyo_only() -> None:
+    shugyo = tuple(t for t in estat.TABLES if t.kind is estat.TableKind.SHUGYO_MARITAL_AGE_INCOME)
+    ctx = make_ctx(estat_responses(shugyo))
+    PIPELINE.run(Stage.FETCH, ctx)
+    staged = PIPELINE.run(Stage.STAGE, ctx)
+    assert staged.written == ("staged/estat/shugyo_marital_age_income",)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == (pipeline.JP_AGE_MART,)  # kiso not staged -> no kiso mart
+    rows = ctx.tables.read_table(pipeline.JP_AGE_MART)
+    assert set(rows[0]) == {
+        "survey",
+        "survey_year",
+        "year",
+        "sex",
+        "age_class",
+        "age_lower",
+        "age_upper",
+        "income_class",
+        "income_class_lower_yen",
+        "income_class_upper_yen",
+        "metric",
+        "value",
+        "denominator",
+        "source",
+    }
+    assert len(rows) == 2 * 3 * 4  # sex x age x income cells (fixture)
+    assert {r["metric"] for r in rows} == {"ever_married_share"}
+    assert {r["survey"] for r in rows} == {"就業構造基本調査"}
+    by = {(r["sex"], r["age_class"], r["income_class"]): r for r in rows}
+    m = by[("male", "25-29", "total")]
+    assert m["value"] == pytest.approx((2_928_900 - 2_200_100) / 2_928_900)
+    assert m["denominator"] == 2_928_900 and m["year"] == 2022 and m["age_upper"] == 30
+    assert by[("male", "85-", "1500-")]["value"] == pytest.approx(1.0)  # never-married '-' = 0
+    assert by[("male", "total", "total")]["age_lower"] is None
+    # sorted: year, sex, age (total first), income lower (total first)
+    assert [r["age_class"] for r in rows[:4]] == ["total"] * 4
+    assert rows[0]["income_class"] == "total" and rows[1]["income_class"] == "0-50"
+
+
+def test_build_income_age_marital_keeps_missing_as_none() -> None:
+    base = {
+        "survey_year": 2022,
+        "year": 2022,
+        "source": "estat_shugyo",
+        "sex": "male",
+        "age_class": "25-29",
+        "age_lower": 25,
+        "age_upper": 30,
+        "income_class": "0-50",
+        "income_class_lower_yen": 0,
+        "income_class_upper_yen": 500_000,
+    }
+    mid = {
+        "income_class": "50-100",
+        "income_class_lower_yen": 500_000,
+        "income_class_upper_yen": 1_000_000,
+    }
+    high = {
+        "income_class": "100-150",
+        "income_class_lower_yen": 1_000_000,
+        "income_class_upper_yen": 1_500_000,
+    }
+    rows = pipeline.build_income_age_marital(
+        [
+            {**base, "marital": "total", "persons": 100.0},
+            {**base, "marital": "never_married", "persons": None},
+            {**base, **mid, "marital": "total", "persons": 0.0},
+            {**base, **mid, "marital": "never_married", "persons": 0.0},
+            {**base, **high, "marital": "total", "persons": 200.0},
+            {**base, **high, "marital": "never_married", "persons": 50.0},
+        ]
+    )
+    assert [(r["income_class"], r["value"], r["denominator"]) for r in rows] == [
+        ("0-50", None, 100.0),  # missing numerator
+        ("50-100", None, 0.0),  # zero denominator
+        ("100-150", 0.75, 200.0),
+    ]
 
 
 def test_build_income_class_fertility_keeps_missing_as_none_and_is_sorted() -> None:
