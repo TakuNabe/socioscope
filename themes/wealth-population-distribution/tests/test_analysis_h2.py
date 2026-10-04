@@ -25,8 +25,10 @@ def panel() -> pl.DataFrame:
                     if (iso3 == "AAA" and year == 1980)
                     else 2 * y_pp / 100,
                     "top10_wealth_share": 4 * y_pp / 100,
-                    "top1_income_quality": 4 if iso3 == "USA" else 1,
+                    "top1_income_quality": 1 if iso3 == "USA" else 4,
                     "top1_wealth_quality": 0,
+                    "top1_income_observed": False if iso3 == "BBB" else None,
+                    "top1_wealth_observed": True,
                     "top_pit_rate": None if year < 2000 else 50.0 - i,
                     "social_expenditure_gdp": socx,
                     "tax_revenue_gdp": taxrev,
@@ -62,7 +64,7 @@ def test_long_difference_keeps_only_countries_with_both_years_and_base_quality()
     assert d2["iso3"].to_list() == ["AAA", "BBB", "JPN", "USA"]
     usa = d2.filter(pl.col("iso3") == "USA").row(0, named=True)
     assert usa["d_social_expenditure_gdp"] == pytest.approx(0.8 * 6 + 1.0)
-    assert usa["top1_income_quality"] == 4
+    assert usa["top1_income_quality"] == 1 and usa["top1_income_observed"] is None
     d3 = h2.long_difference(p, 1980, 2010, ("top_pit_rate",))
     assert d3.height == 0  # pit missing at base
 
@@ -102,11 +104,22 @@ def test_fit_twoway_fe_recovers_slopes_net_of_country_and_year_effects() -> None
     assert f.r2 == pytest.approx(1.0, abs=1e-6)
 
 
-def test_drop_bad_quality_uses_base_year_flag_of_matching_series() -> None:
+def test_drop_low_quality_drops_q_le_1_of_matching_series_and_keeps_null() -> None:
     p = h2.to_pp(panel())
     d = h2.long_difference(
         p, 1980, 2010, ("top1_income_share", "top10_income_share", *h2.INST_NO_PIT)
     )
-    assert h2.drop_bad_quality(d, "top1_income_share")["iso3"].to_list() == ["AAA", "BBB", "JPN"]
-    assert h2.drop_bad_quality(d, "top10_income_share")["iso3"].to_list() == ["AAA", "BBB", "JPN"]
-    assert h2.drop_bad_quality(d, "top1_wealth_share").height == 4
+    # USA has income quality 1 (low) -> dropped; wealth quality is 0 for all -> all dropped
+    assert h2.drop_low_quality(d, "top1_income_share")["iso3"].to_list() == ["AAA", "BBB", "JPN"]
+    assert h2.drop_low_quality(d, "top10_income_share")["iso3"].to_list() == ["AAA", "BBB", "JPN"]
+    assert h2.drop_low_quality(d, "top1_wealth_share").height == 0
+    nulls = d.with_columns(pl.lit(None, dtype=pl.Int64).alias("top1_income_quality"))
+    assert h2.drop_low_quality(nulls, "top1_income_share").height == 4
+
+
+def test_drop_unobserved_drops_false_keeps_true_and_null() -> None:
+    p = h2.to_pp(panel())
+    d = h2.long_difference(p, 1980, 2010, ("top1_income_share", *h2.INST_NO_PIT))
+    assert h2.drop_unobserved(d, "top1_income_share")["iso3"].to_list() == ["AAA", "JPN", "USA"]
+    assert h2.drop_unobserved(d, "top1_wealth_share").height == 4  # all True
+    assert h2.drop_unobserved(d.drop("top1_income_observed"), "top1_income_share").height == 4

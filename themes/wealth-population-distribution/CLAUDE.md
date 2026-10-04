@@ -36,7 +36,7 @@ uv run socioscope run wealth-population-distribution mart                # 両 m
 | `staged/wid/data_points` | iso3×variable×year（`top_shares` にある年） | iso3, year, variable, is_observed (bool / None=不明), construction (`observed`/`partial`/`imputed`/None), basis (`method_by_year` / `trend_before_YYYY` / `long_run_before_YYYY` / None), method_segment (年別記述の原文 / None), source |
 | `marts/wealth_population_panel` | iso3×year | iso3, year, top1_income_share, top10_income_share, bottom50_income_share, top1_wealth_share, top10_wealth_share, population, source, top1_income_observed (bool/null), top1_wealth_observed (bool/null) |
 | `staged/oecd/<indicator>`（`top_pit_rate`, `social_expenditure_gdp`, `tax_revenue_gdp`, `inheritance_tax_rev_gdp`） | iso3×year | iso3, year, value (%), unit (SDMX コード `PT_WG_EARN_G` / `PT_B1GQ`), obs_status, source (`oecd`) |
-| `marts/wealth_institutions_panel` | iso3×year（OECD 38、1980–） | iso3, year, top1_income_share, top10_income_share, top1_wealth_share, top10_wealth_share, top1_income_quality, top1_wealth_quality (WID data_quality), top_pit_rate, social_expenditure_gdp, tax_revenue_gdp, inheritance_tax_rev_gdp, source (`wid_world+oecd`) |
+| `marts/wealth_institutions_panel` | iso3×year（OECD 38、1980–） | iso3, year, top1_income_share, top10_income_share, top1_wealth_share, top10_wealth_share, top1_income_quality, top1_wealth_quality (WID data_quality), top1_income_observed, top1_wealth_observed (bool/null, panel から転記), top_pit_rate, social_expenditure_gdp, tax_revenue_gdp, inheritance_tax_rev_gdp, source (`wid_world+oecd`) |
 | `staged/worldbank/gini`（予定） | iso3×year | iso3, country, year, value, indicator, source |
 
 ## 規約・決定

@@ -27,7 +27,12 @@ social_expenditure_gdp（公的社会支出 %GDP）、tax_revenue_gdp（総税�
 (c) (a) の R²（＝ Δ の国間分散のうち制度変数の変化で説明される割合）と調整済み R² を報告。
 (d) 図: Δtop1 所得シェア (2000→T) vs Δ最高税率 の散布図（国ラベル、日本を強調）、FE 係数プロット。
 頑健性（事前に列挙、全部報告）: A1 の base=1990、top1 → top10、米国除外、
-WID data_quality が 4–5（推計・外挿）の国を base 年の品質で除外。
+R4: WID data_quality が**低い**（q ≤ 1）国を base 年の品質で除外。
+  訂正記録: 初版は「q 4–5 = 推計・外挿」と誤解して 4–5 を落としていた。WID の data_quality は
+  高いほど一次データに近い（USA DINA 1962 年以降 = 5、JPN/SAU 資産 = 0; theme CLAUDE.md）と
+  判明したため、結果を見た後だが**意味の訂正として**向きを反転した（結果に合わせた選択ではない）。
+R5（この改訂で追加、事前列挙に無かった変種）: base 年の WID 値が metadata 上 imputed
+  （`top1_*_observed == False`）の国を除外。null（不明）は残す。
 
 これは**関連**の分析。政策は内生（格差が政策を変える逆の因果）、省略変数（グローバル化・技術・資本所得化）、
 WID の推計誤差があり、因果効果は主張しない。純粋関数（end_year, long_difference, fit_ols_hc3,
@@ -55,7 +60,11 @@ INST_ALL = ("top_pit_rate", "social_expenditure_gdp", "tax_revenue_gdp")
 INST_NO_PIT = ("social_expenditure_gdp", "tax_revenue_gdp")
 INHERITANCE = "inheritance_tax_rev_gdp"
 QUALITY = {"top1_income_share": "top1_income_quality", "top1_wealth_share": "top1_wealth_quality"}
-BAD_QUALITY = {4, 5}
+OBSERVED = {
+    "top1_income_share": "top1_income_observed",
+    "top1_wealth_share": "top1_wealth_observed",
+}
+LOW_QUALITY = {0, 1}  # WID data_quality: higher = closer to primary data (theme CLAUDE.md)
 MIN_COUNTRIES_FOR_END = 36
 JAPAN = "JPN"
 SHORT = {
@@ -121,7 +130,7 @@ def long_difference(
 
     quality 列（WID data_quality）は base 年の値を付ける。
     """
-    qcols = [c for c in QUALITY.values() if c in panel.columns]
+    qcols = [c for c in (*QUALITY.values(), *OBSERVED.values()) if c in panel.columns]
     b = panel.filter(pl.col("year") == base).select("iso3", *cols, *qcols)
     e = panel.filter(pl.col("year") == end).select("iso3", *cols)
     joined = b.join(e, on="iso3", suffix="_end", how="inner")
@@ -195,10 +204,21 @@ def fit_twoway_fe(df: pl.DataFrame, y: str, xs: tuple[str, ...], label: str) -> 
     )
 
 
-def drop_bad_quality(diff: pl.DataFrame, y: str) -> pl.DataFrame:
-    """base 年の WID data_quality が 4–5 の国を落とす（y に対応する品質列）。"""
+def drop_low_quality(diff: pl.DataFrame, y: str) -> pl.DataFrame:
+    """base 年の WID data_quality が低い（q ≤ 1）国を落とす（y に対応する品質列）。null は残す。"""
     q = QUALITY[y.replace("top10", "top1")]
-    return diff.filter(~pl.col(q).is_in(sorted(BAD_QUALITY)) | pl.col(q).is_null())
+    return diff.filter(~pl.col(q).is_in(sorted(LOW_QUALITY)) | pl.col(q).is_null())
+
+
+def drop_unobserved(diff: pl.DataFrame, y: str) -> pl.DataFrame:
+    """base 年の WID 値が metadata 上 imputed（observed == False）の国を落とす。
+
+    null（不明）は残す。observed 列が無ければそのまま返す。
+    """
+    o = OBSERVED[y.replace("top10", "top1")]
+    if o not in diff.columns:
+        return diff
+    return diff.filter(pl.col(o).is_null() | pl.col(o))
 
 
 # ---------------------------------------------------------------- figures
@@ -426,16 +446,27 @@ def run(data_dir: Path, fig_dir: Path) -> None:
             )
         )
     print(
-        "-- R4: excluding countries whose WID data_quality at the base year is 4-5 "
-        "(estimated/extrapolated)"
+        "-- R4: excluding countries whose WID data_quality at the base year is low (q<=1; "
+        "higher = closer to primary data; direction corrected, see docstring)"
     )
     for y in OUTCOMES:
-        q80, q00 = drop_bad_quality(d80, y), drop_bad_quality(d00, y)
+        q80, q00 = drop_low_quality(d80, y), drop_low_quality(d00, y)
         dropped80 = sorted(set(d80["iso3"]) - set(q80["iso3"]))
         dropped00 = sorted(set(d00["iso3"]) - set(q00["iso3"]))
         print(f"  {y}: dropped at 1980 {dropped80 or '-'}; dropped at 2000 {dropped00 or '-'}")
-        print_fit(fit_ols_hc3(q80, f"d_{y}", tuple(f"d_{x}" for x in INST_NO_PIT), "R4 A1 q<4"))
-        print_fit(fit_ols_hc3(q00, f"d_{y}", tuple(f"d_{x}" for x in INST_ALL), "R4 A2 q<4"))
+        print_fit(fit_ols_hc3(q80, f"d_{y}", tuple(f"d_{x}" for x in INST_NO_PIT), "R4 A1 q>1"))
+        print_fit(fit_ols_hc3(q00, f"d_{y}", tuple(f"d_{x}" for x in INST_ALL), "R4 A2 q>1"))
+    print(
+        "-- R5 (added at this revision, not in the original pre-list): excluding countries whose "
+        "base-year WID value is imputed per metadata (observed == False; null kept)"
+    )
+    for y in OUTCOMES:
+        o80, o00 = drop_unobserved(d80, y), drop_unobserved(d00, y)
+        dropped80 = sorted(set(d80["iso3"]) - set(o80["iso3"]))
+        dropped00 = sorted(set(d00["iso3"]) - set(o00["iso3"]))
+        print(f"  {y}: dropped at 1980 {dropped80 or '-'}; dropped at 2000 {dropped00 or '-'}")
+        print_fit(fit_ols_hc3(o80, f"d_{y}", tuple(f"d_{x}" for x in INST_NO_PIT), "R5 A1 obs"))
+        print_fit(fit_ols_hc3(o00, f"d_{y}", tuple(f"d_{x}" for x in INST_ALL), "R5 A2 obs"))
 
 
 def main() -> None:

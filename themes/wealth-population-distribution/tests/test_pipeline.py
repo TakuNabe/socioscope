@@ -108,6 +108,8 @@ def test_stage_oecd_writes_one_table_per_indicator_and_mart_joins_institutions()
         "top10_wealth_share": 0.58,
         "top1_income_quality": 1,
         "top1_wealth_quality": 0,
+        "top1_income_observed": False,  # fixture metadata: 1986-2023 extrapolated distribution
+        "top1_wealth_observed": None,  # fixture metadata says nothing about wealth 1980+
         "top_pit_rate": 50.0,
         "social_expenditure_gdp": 14.916,
         "tax_revenue_gdp": 25.330599,
@@ -134,7 +136,13 @@ def test_build_institutions_panel_restricts_to_oecd_members_from_1980() -> None:
     panel = [
         {"iso3": "CHN", "year": 2000, "top1_income_share": 0.1, "top1_wealth_share": 0.3},
         {"iso3": "JPN", "year": 1979, "top1_income_share": 0.1, "top1_wealth_share": 0.3},
-        {"iso3": "JPN", "year": 2000, "top1_income_share": 0.1, "top1_wealth_share": 0.3},
+        {
+            "iso3": "JPN",
+            "year": 2000,
+            "top1_income_share": 0.1,
+            "top1_wealth_share": 0.3,
+            "top1_income_observed": False,
+        },
     ]
     shares = [
         {
@@ -150,6 +158,7 @@ def test_build_institutions_panel_restricts_to_oecd_members_from_1980() -> None:
     out = build_institutions_panel(panel, shares, staged)
     assert [(r["iso3"], r["year"]) for r in out] == [("JPN", 2000)]
     assert out[0]["top1_income_quality"] == 4 and out[0]["top1_wealth_quality"] is None
+    assert out[0]["top1_income_observed"] is False and out[0]["top1_wealth_observed"] is None
     assert out[0]["top_pit_rate"] == 50.0 and out[0]["social_expenditure_gdp"] is None
 
 

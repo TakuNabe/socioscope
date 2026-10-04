@@ -180,6 +180,7 @@ QUALITY_COLUMNS: dict[str, tuple[str, str]] = {  # mart column -> (variable, per
     "top1_income_quality": ("sptinc992j", "p99p100"),
     "top1_wealth_quality": ("shweal992j", "p99p100"),
 }
+INSTITUTION_OBSERVED = ("top1_income_observed", "top1_wealth_observed")  # copied from panel
 
 
 def build_institutions_panel(
@@ -199,7 +200,7 @@ def build_institutions_panel(
 
     for r in panel:
         if (k := key(r)) is not None:
-            cells[k].update({c: r.get(c) for c in INSTITUTION_SHARES})
+            cells[k].update({c: r.get(c) for c in (*INSTITUTION_SHARES, *INSTITUTION_OBSERVED)})
     by_series = {v: k for k, v in QUALITY_COLUMNS.items()}
     for r in shares:
         col = by_series.get((str(r["variable"]), str(r["percentile"])))
@@ -209,7 +210,7 @@ def build_institutions_panel(
         for r in rows:
             if (k := key(r)) is not None:
                 cells[k][indicator] = r["value"]
-    columns = (*INSTITUTION_SHARES, *QUALITY_COLUMNS, *oecd.INDICATORS)
+    columns = (*INSTITUTION_SHARES, *QUALITY_COLUMNS, *INSTITUTION_OBSERVED, *oecd.INDICATORS)
     return [
         {
             "iso3": iso3,

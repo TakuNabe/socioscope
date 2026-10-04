@@ -16,8 +16,8 @@
 ## データ
 | 変数 | 出典 | 定義・単位 | 期間・国 | 備考（欠損・断絶） |
 |---|---|---|---|---|
-| top1_income_share / top10_income_share | WID.world `sptinc992j` p99p100 / p90p100 | 税引前国民所得シェア、成人・equal-split、pp に換算 | 1980–2024、OECD 38 | data_quality 4–5（推計・外挿）が 1980 年の所得で 15/38 か国、2000 年で 26/38 か国 |
-| top1_wealth_share / top10_wealth_share | WID.world `shweal992j` p99p100 / p90p100 | 個人純資産シェア、同上 | 同上 | 1980 年に 4–5 が 4 か国、2000 年に 11 か国。資産統計は国で定義が異なる |
+| top1_income_share / top10_income_share | WID.world `sptinc992j` p99p100 / p90p100 | 税引前国民所得シェア、成人・equal-split、pp に換算 | 1980–2024、OECD 38 | WID `data_quality`（0–5、**高いほど一次データに近い**; theme CLAUDE.md）が ≤1 の国は 1980 年に 4/38、2000 年に 1/38。metadata 上 imputed（`top1_income_observed == False`）は 1980 年 20/38、2000 年 10/38（不明 17/19） |
+| top1_wealth_share / top10_wealth_share | WID.world `shweal992j` p99p100 / p90p100 | 個人純資産シェア、同上 | 同上 | `data_quality` は資産では大半の国が 0（JPN/SAU 全年 0 など、「未記載」の可能性）なので q≤1 除外は資産には使えない。observed フラグは資産に無い（null）。資産統計は国で定義が異なる |
 | top_pit_rate | OECD `DSD_TAX_PIT@DF_PIT_TOP_EARN_THRESH` `TS_PIT` | 最高限界個人所得税率（中央＋地方合算）、賃金所得に対する %。資本所得の税率ではない | **2000–2025**、38 | SDMX には 2000 年以降しか無い（1981–99 の Excel は robots.txt で Disallow）。A1 に含められない |
 | social_expenditure_gdp | OECD SOCX `DF_SOCX_AGG` ES10/_T/_T | 公的社会支出（現金＋現物）、%GDP | 1980–2024（1980 年は 23 か国、2000 年 36） | 15 か国が 1985–2011 開始。2023–24 は暫定で欠損 |
 | tax_revenue_gdp | OECD Revenue Statistics `DF_RSOECD` S13/_T | 一般政府 総税収、%GDP | 1965–2024（1980 年は 26 か国） | 12 か国が 1990–95 開始 |
@@ -65,15 +65,16 @@ A1: 24%（所得）/ 18%（資産）、調整済み 16% / 9%。A2: 13% / 7%、�
 | R2: top10 で A2（n=36） | pit −0.118 (p=0.13), 他は非有意 | pit −0.187 (p=0.079), 他は非有意 |
 | R3: 米国除外 A1（n=22） | socx +0.448 (p=0.026), taxrev −0.377 (p=0.022) | 非有意 |
 | R3: 米国除外 A2（n=35） | pit −0.110 (p=0.16) | 非有意 |
-| R4: WID data_quality 4–5 を起点年で除外 | A1 n=**11**（12 か国除外）: socx +0.579 (p=0.21), taxrev −0.340 (p=0.42)；A2 n=**12**（24 か国除外）: pit −0.247 (p=0.24) | A1 n=19: 非有意；A2 n=27: pit −0.121 (p=0.37), taxrev +0.305 (p=0.14) |
+| R4: WID data_quality が**低い**（q≤1）国を起点年で除外（**向きを訂正**: 初版は q 4–5 を「推計・外挿」と誤解して落としていた。WID の q は高いほど一次データに近いと判明したため、結果を見た後だが意味の訂正として反転。旧版の数値: A1 n=11 socx +0.579 (p=0.21)、A2 n=12 pit −0.247 (p=0.24)） | A1 n=19（ESP, GBR, JPN, TUR 除外）: socx **+0.424** (p=0.021), taxrev **−0.318** (p=0.021), R² 0.227；A2 n=35（JPN 除外）: pit −0.115 (p=0.13), 他は非有意 | 資産は q=0 の国が大半で n=6 / 11 に落ち、解釈不能（A1: socx +1.53 (p=0.043) だが n=6；A2: pit +0.48 (p=0.14)） |
+| R5（**この改訂で追加**、事前列挙外）: 起点年の WID 値が metadata 上 imputed（observed == False）の国を除外、不明は残す | A1 n=12（11 か国除外）: socx +0.864 (p=0.32), taxrev −0.857 (p=0.29), R² 0.342；A2 n=26（10 か国除外）: pit −0.083 (p=0.33), 他は非有意 | 資産は observed フラグが無い（null）ため A1/A2 と同一 |
 
-A1 の有意な関連は、起点を 10 年ずらすと消え、WID の推計値を除くと n が 11 に落ちて検出できない。A2・FE はどの変更でも非有意。
+A1 の有意な関連は、起点を 10 年ずらすと消える。低品質国（q≤1）を外しても残る（n=19）が、metadata 上 imputed の起点値を外すと n=12 で係数は同方向のまま有意でなくなる（検出力不足）。A2・FE はどの変更でも非有意。
 
 ## 限界・言えないこと
 - **因果ではない**: 政策は格差に反応して変わる（逆の因果）、グローバル化・技術・資本所得化・金融自由化などの省略変数、同時決定。FE は時間不変の国特性と共通ショックしか除かない。「最高税率を上げても格差は変わらない」とも「変わる」とも言えない。
 - **n が小さい**: 長期差分は n=23–36 で、係数 0.1–0.3 pp/pp 程度の関連を検出する力がない（最高税率の 95% 区間は [−0.26, +0.03] pp/pp。10 pp の税率変化で −2.6〜+0.3 pp の幅）。
 - **最高税率は 2000 年以降のみ**で、Piketty 的な 1980 年前後の税制転換（米英の最高税率引下げ）は観測期間外。A1 は税率を含まない。
-- **測定**: WID の上位シェアは国・年代で推計方法が異なり、1980 年の所得シェアは 38 か国中 15 か国が推計・外挿（data_quality 4–5）。最高税率は賃金所得の法定税率で、実効税率・資本所得税率ではない。社会支出・税収は GDP 比で分母の改定を受ける。
+- **測定**: WID の上位シェアは国・年代で推計方法が異なり、1980 年の所得シェアは metadata 上 38 か国中 20 か国が imputed（17 か国は不明）。`data_quality` の意味は WID 非公開で、本レポート初版は向きを逆に解釈していた（R4 を訂正済み。旧数値も頑健性表に残した）。資産の `data_quality` は大半が 0 で品質フィルタに使えない。最高税率は賃金所得の法定税率で、実効税率・資本所得税率ではない。社会支出・税収は GDP 比で分母の改定を受ける。
 - **国レベルの関連**であり、個人・世帯レベル（高所得者の行動）には読み替えない。
 - OECD 38 か国に限られ、非 OECD の大国（CN, IN, BR, RU, ZA 等）は含まない。
 - 相続税は税収ベースの代理で、税率・課税ベース・免税点を表さない。A2+ の資産での負の係数（p=0.09）は補助指標であり、相続税を廃止した少数の国（SWE, SVK, CZE, NOR, NZL）と KOR（+0.48 pp）の変化に引かれている可能性がある。
@@ -86,11 +87,11 @@ uv run socioscope run wealth-population-distribution mart                # stage
 uv run python themes/wealth-population-distribution/src/theme_wealth_population_distribution/analysis/a20261004_h2_institutions.py \
   > themes/wealth-population-distribution/reports/2026-10-04-h2-institutions.stdout.txt
 ```
-mart スキーマ: iso3, year, top1_income_share, top10_income_share, top1_wealth_share, top10_wealth_share, top1_income_quality, top1_wealth_quality, top_pit_rate, social_expenditure_gdp, tax_revenue_gdp, inheritance_tax_rev_gdp, source（1,748 行）。スクリプトは乱数を使わず、2 回実行で標準出力が一致することを確認した。
+mart スキーマ: iso3, year, top1_income_share, top10_income_share, top1_wealth_share, top10_wealth_share, top1_income_quality, top1_wealth_quality, top1_income_observed, top1_wealth_observed, top_pit_rate, social_expenditure_gdp, tax_revenue_gdp, inheritance_tax_rev_gdp, source（1,748 行）。スクリプトは乱数を使わず、2 回実行で標準出力が一致することを確認した。
 
 ## チェックリスト回答
-- A: 問い・仮説 H2 は design doc に事前登録済み。制度変数と仕様（A1/A2/B1/B2/頑健性）は分析前に design doc と script docstring に固定した。推定したい量は記述的関連（長期差分 OLS 係数・R²、FE within 係数）。事後追加の分析はない。
+- A: 問い・仮説 H2 は design doc に事前登録済み。制度変数と仕様（A1/A2/B1/B2/頑健性）は分析前に design doc と script docstring に固定した。推定したい量は記述的関連（長期差分 OLS 係数・R²、FE within 係数）。事後の変更は 2 点を明記: R4 の向きの訂正（data_quality の意味の誤解を正したもの。旧数値も併記）と、R5（observed フラグによる除外）の追加（この改訂で追加と明記）。
 - B: 全変数の出典・定義・単位は上表と `design/data-sources.md`、manifest（2026-10-04、OECD 4 行）に一致。欠損・開始年の遅れ・WID data_quality を列挙し、補完していない。サンプルは OECD 38（OECD データの範囲）、長期差分は両年に観測がある国のみで、その選択が n（23/36）と 1980 年の WID 推計値の多さに影響することを明記した。
 - C: 識別戦略は**なし**（記述）。逆の因果・省略変数・同時決定を列挙し、対処できないため因果語を使っていない。国レベルの関連を個人レベルに読み替えていない。
-- D: SE は長期差分で HC3、パネルで国クラスタ（38）。試した仕様（A1, A2, A2+, B1/B2 × L0/L5, R1–R4）を全部報告。A1 の有意な関連は 1990 起点で消え、他はどの変更でも非有意と明記。
+- D: SE は長期差分で HC3、パネルで国クラスタ（38）。試した仕様（A1, A2, A2+, B1/B2 × L0/L5, R1–R5、R4 の旧版数値も）を全部報告。A1 の有意な関連は 1990 起点で消え、R5 では有意でなくなり、他はどの変更でも非有意と明記。
 - E: 「関連」「整合的」を使い、「効果」は使っていない。図は軸・単位・出典・n を明記（対数軸なし）。限界節あり。再現コマンドと mart スキーマ・行数を記載。LLM 構造化は未使用。

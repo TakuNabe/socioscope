@@ -197,24 +197,45 @@ R3 A2 -USA  y=d_top1_wealth_share  n=35  R2=0.069 adjR2=-0.021
     d_top_pit_rate               b= -0.1043  se= 0.1490  p= 0.484  95%=[-0.3963, +0.1877]
     d_social_expenditure_gdp     b= +0.0700  se= 0.3260  p= 0.830  95%=[-0.5690, +0.7090]
     d_tax_revenue_gdp            b= +0.1753  se= 0.2127  p= 0.410  95%=[-0.2415, +0.5921]
--- R4: excluding countries whose WID data_quality at the base year is 4-5 (estimated/extrapolated)
-  top1_income_share: dropped at 1980 ['AUS', 'CAN', 'DEU', 'DNK', 'FIN', 'FRA', 'GRC', 'IRL', 'NLD', 'NZL', 'SWE', 'USA']; dropped at 2000 ['AUS', 'BEL', 'CAN', 'CHE', 'CZE', 'DEU', 'DNK', 'ESP', 'FIN', 'FRA', 'GBR', 'GRC', 'HUN', 'IRL', 'ITA', 'KOR', 'LUX', 'NLD', 'NOR', 'NZL', 'POL', 'SVN', 'SWE', 'USA']
-R4 A1 q<4  y=d_top1_income_share  n=11  R2=0.209 adjR2=0.011
-    const                        b= -0.9715  se= 1.8042  p= 0.590  95%=[-4.5078, +2.5647]
-    d_social_expenditure_gdp     b= +0.5791  se= 0.4585  p= 0.207  95%=[-0.3195, +1.4777]
-    d_tax_revenue_gdp            b= -0.3397  se= 0.4245  p= 0.424  95%=[-1.1718, +0.4923]
-R4 A2 q<4  y=d_top1_income_share  n=12  R2=0.284 adjR2=0.016
-    const                        b= -2.2209  se= 2.4321  p= 0.361  95%=[-6.9879, +2.5460]
-    d_top_pit_rate               b= -0.2470  se= 0.2102  p= 0.240  95%=[-0.6590, +0.1649]
-    d_social_expenditure_gdp     b= +0.9254  se= 1.1672  p= 0.428  95%=[-1.3623, +3.2131]
-    d_tax_revenue_gdp            b= -0.0738  se= 0.8705  p= 0.932  95%=[-1.7800, +1.6323]
-  top1_wealth_share: dropped at 1980 ['DEU', 'DNK', 'FRA', 'USA']; dropped at 2000 ['CHE', 'DNK', 'ESP', 'FRA', 'GBR', 'ITA', 'NLD', 'SWE', 'USA']
-R4 A1 q<4  y=d_top1_wealth_share  n=19  R2=0.156 adjR2=0.050
-    const                        b= -0.3505  se= 3.5401  p= 0.921  95%=[-7.2891, +6.5881]
-    d_social_expenditure_gdp     b= +0.4933  se= 0.7212  p= 0.494  95%=[-0.9203, +1.9069]
-    d_tax_revenue_gdp            b= -0.1484  se= 0.4676  p= 0.751  95%=[-1.0649, +0.7682]
-R4 A2 q<4  y=d_top1_wealth_share  n=27  R2=0.151 adjR2=0.040
-    const                        b= +2.3520  se= 1.2339  p= 0.057  95%=[-0.0664, +4.7704]
-    d_top_pit_rate               b= -0.1209  se= 0.1349  p= 0.370  95%=[-0.3853, +0.1436]
-    d_social_expenditure_gdp     b= -0.1254  se= 0.2876  p= 0.663  95%=[-0.6890, +0.4383]
-    d_tax_revenue_gdp            b= +0.3046  se= 0.2077  p= 0.142  95%=[-0.1024, +0.7117]
+-- R4: excluding countries whose WID data_quality at the base year is low (q<=1; higher = closer to primary data; direction corrected, see docstring)
+  top1_income_share: dropped at 1980 ['ESP', 'GBR', 'JPN', 'TUR']; dropped at 2000 ['JPN']
+R4 A1 q>1  y=d_top1_income_share  n=19  R2=0.227 adjR2=0.130
+    const                        b= +1.8960  se= 0.8713  p= 0.030  95%=[+0.1883, +3.6038]
+    d_social_expenditure_gdp     b= +0.4243  se= 0.1836  p= 0.021  95%=[+0.0644, +0.7842]
+    d_tax_revenue_gdp            b= -0.3184  se= 0.1377  p= 0.021  95%=[-0.5882, -0.0485]
+R4 A2 q>1  y=d_top1_income_share  n=35  R2=0.134 adjR2=0.051
+    const                        b= -0.5113  se= 0.9180  p= 0.578  95%=[-2.3106, +1.2880]
+    d_top_pit_rate               b= -0.1148  se= 0.0761  p= 0.131  95%=[-0.2639, +0.0343]
+    d_social_expenditure_gdp     b= +0.2875  se= 0.3133  p= 0.359  95%=[-0.3265, +0.9016]
+    d_tax_revenue_gdp            b= +0.1390  se= 0.2518  p= 0.581  95%=[-0.3544, +0.6325]
+  top1_wealth_share: dropped at 1980 ['AUS', 'AUT', 'BEL', 'CAN', 'CHE', 'ESP', 'FIN', 'GRC', 'IRL', 'ITA', 'JPN', 'LUX', 'NOR', 'NZL', 'PRT', 'SWE', 'TUR']; dropped at 2000 ['AUS', 'AUT', 'BEL', 'CAN', 'CHL', 'CZE', 'DEU', 'EST', 'GRC', 'HUN', 'IRL', 'ISL', 'ISR', 'JPN', 'LTU', 'LUX', 'LVA', 'MEX', 'NOR', 'NZL', 'POL', 'PRT', 'SVK', 'SVN', 'TUR']
+R4 A1 q>1  y=d_top1_wealth_share  n=6  R2=0.734 adjR2=0.557
+    const                        b= -2.2470  se= 2.0671  p= 0.277  95%=[-6.2985, +1.8045]
+    d_social_expenditure_gdp     b= +1.5310  se= 0.7552  p= 0.043  95%=[+0.0508, +3.0112]
+    d_tax_revenue_gdp            b= -0.8129  se= 1.8534  p= 0.661  95%=[-4.4455, +2.8198]
+R4 A2 q>1  y=d_top1_wealth_share  n=11  R2=0.627 adjR2=0.468
+    const                        b= -0.1215  se= 2.1464  p= 0.955  95%=[-4.3284, +4.0854]
+    d_top_pit_rate               b= +0.4806  se= 0.3293  p= 0.144  95%=[-0.1648, +1.1260]
+    d_social_expenditure_gdp     b= +0.3231  se= 0.3935  p= 0.412  95%=[-0.4482, +1.0943]
+    d_tax_revenue_gdp            b= -0.3369  se= 0.2724  p= 0.216  95%=[-0.8709, +0.1970]
+-- R5 (added at this revision, not in the original pre-list): excluding countries whose base-year WID value is imputed per metadata (observed == False; null kept)
+  top1_income_share: dropped at 1980 ['AUT', 'BEL', 'CHE', 'DEU', 'ESP', 'GBR', 'GRC', 'ITA', 'LUX', 'NLD', 'NOR']; dropped at 2000 ['AUT', 'CZE', 'DEU', 'EST', 'IRL', 'ISL', 'ITA', 'LTU', 'LVA', 'MEX']
+R5 A1 obs  y=d_top1_income_share  n=12  R2=0.342 adjR2=0.195
+    const                        b= +0.7437  se= 4.1905  p= 0.859  95%=[-7.4695, +8.9570]
+    d_social_expenditure_gdp     b= +0.8638  se= 0.8713  p= 0.321  95%=[-0.8439, +2.5715]
+    d_tax_revenue_gdp            b= -0.8568  se= 0.8135  p= 0.292  95%=[-2.4513, +0.7377]
+R5 A2 obs  y=d_top1_income_share  n=26  R2=0.103 adjR2=-0.019
+    const                        b= -0.7678  se= 0.9526  p= 0.420  95%=[-2.6349, +1.0993]
+    d_top_pit_rate               b= -0.0832  se= 0.0855  p= 0.331  95%=[-0.2508, +0.0845]
+    d_social_expenditure_gdp     b= +0.2683  se= 0.3504  p= 0.444  95%=[-0.4186, +0.9552]
+    d_tax_revenue_gdp            b= +0.0412  se= 0.2446  p= 0.866  95%=[-0.4383, +0.5207]
+  top1_wealth_share: dropped at 1980 -; dropped at 2000 -
+R5 A1 obs  y=d_top1_wealth_share  n=23  R2=0.176 adjR2=0.093
+    const                        b= +0.0664  se= 3.1631  p= 0.983  95%=[-6.1332, +6.2661]
+    d_social_expenditure_gdp     b= +0.6965  se= 0.6412  p= 0.277  95%=[-0.5602, +1.9532]
+    d_tax_revenue_gdp            b= -0.3324  se= 0.4379  p= 0.448  95%=[-1.1906, +0.5258]
+R5 A2 obs  y=d_top1_wealth_share  n=36  R2=0.069 adjR2=-0.018
+    const                        b= +1.2714  se= 1.2490  p= 0.309  95%=[-1.1766, +3.7195]
+    d_top_pit_rate               b= -0.1062  se= 0.1467  p= 0.469  95%=[-0.3936, +0.1813]
+    d_social_expenditure_gdp     b= +0.0798  se= 0.3166  p= 0.801  95%=[-0.5407, +0.7003]
+    d_tax_revenue_gdp            b= +0.1695  se= 0.2075  p= 0.414  95%=[-0.2371, +0.5761]
