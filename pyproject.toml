@@ -58,7 +58,7 @@ namespace_packages = true
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]
-module = ["duckdb", "duckdb.*", "pyarrow", "pyarrow.*"]
+module = ["duckdb", "duckdb.*", "pyarrow", "pyarrow.*", "statsmodels", "statsmodels.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
