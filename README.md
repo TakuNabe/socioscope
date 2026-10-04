@@ -6,7 +6,7 @@
 | slug | 問い | 状態 |
 |---|---|---|
 | `wealth-population-distribution` | 戦後、資本主義の進展とともに富の偏りは極端化しているのか（世界各国・日本） | 分析中（WID.world 取得〜mart 実装済み（46 か国）。H1 report: `themes/wealth-population-distribution/reports/2026-10-04-h1-ushape.md`。H2 用に OECD SDMX（最高税率・社会支出・税収）fetch〜mart 実装済み（OECD 38）。H2 report（限定・関連のみ）: `.../2026-10-04-h2-institutions.md`） |
-| `growth-fertility` | 経済成長と出生率の関係は国間・国内（所得階層）でフラクタルか | 分析中（World Bank fetch〜mart 実装済み。H1 report: `themes/growth-fertility/reports/2026-10-04-h1-income-tfr.md`。H3 用に e-Stat 国民生活基礎調査（所得階級×有配偶率・児童のいる世帯）fetch〜mart 実装済み） |
+| `growth-fertility` | 経済成長と出生率の関係は国間・国内（所得階層）でフラクタルか | H1〜H3b report 済み（`themes/growth-fertility/reports/2026-10-04-h1-income-tfr.md`, `...-h2-growth-shocks.md`, `...-h3-jp-income-class.md`, `...-h3b-age-adjusted.md`）。**総括（一般読者向け・日本語・図 13 枚）**: `themes/growth-fertility/reports/2026-10-05-summary-growth-fertility.md`。データ: World Bank WDI、e-Stat 国民生活基礎調査・就業構造基本調査 fetch〜mart 実装済み |
 
 ## セットアップ
 ```bash
