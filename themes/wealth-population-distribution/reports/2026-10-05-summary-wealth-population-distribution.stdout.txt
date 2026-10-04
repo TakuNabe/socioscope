@@ -1,0 +1,107 @@
+== font: Hiragino Sans ==
+== inputs == panel=10396 staged=25040 data_points=6261 institutions=1748 countries=46
+== fig01 explainer ==
+  fig01 JPN 2024 groups: {'上位 1%': 0.1265, '次の 9%': 0.3085, '中間 40%': 0.3829, '下位 50%': 0.1821} cells: {'上位 1%': 13, '次の 9%': 31, '中間 40%': 38, '下位 50%': 18}
+  wrote s01_explainer_top1_share.png
+== fig02/03 long-run ==
+  top1_income_share USA: first 1900=0.155 last 2024=0.207
+  top1_income_share FRA: first 1900=0.237 last 2024=0.118
+  top1_income_share GBR: first 1900=0.276 last 2024=0.131
+  top1_income_share DEU: first 1900=0.224 last 2024=0.133
+  top1_income_share SWE: first 1900=0.238 last 2024=0.095
+  top1_income_share JPN: first 1900=0.198 last 2024=0.127
+  top1_income_share CHN: first 1900=0.178 last 2024=0.158
+  top1_income_share IND: first 1900=0.168 last 2024=0.231
+  wrote s02_longrun_top1_income.png
+  top1_wealth_share USA: first 1900=0.354 last 2024=0.348
+  top1_wealth_share FRA: first 1900=0.550 last 2024=0.277
+  top1_wealth_share GBR: first 1900=0.716 last 2024=0.213
+  top1_wealth_share DEU: first 1900=0.520 last 2024=0.279
+  top1_wealth_share SWE: first 1900=0.576 last 2024=0.275
+  top1_wealth_share JPN: first 1900=0.403 last 2024=0.246
+  top1_wealth_share CHN: first 1900=0.376 last 2024=0.304
+  top1_wealth_share IND: first 1900=0.276 last 2024=0.401
+  wrote s03_longrun_top1_wealth.png
+== fig04/05 small multiples ==
+  wrote s04_small_multiples_top1_wealth.png
+  wrote s05_small_multiples_top1_income.png
+== fig06 change dots ==
+  change since 1980 top1_income_share: up 37/46, median(others)=+3.48, JPN=+2.15
+  change since 1980 top1_wealth_share: up 35/46, median(others)=+3.77, JPN=+1.95
+  wrote s06_change_since_1980_dots.png
+== fig07 trough histogram ==
+  trough bins top1_wealth_share: [('1950s', 2), ('1960s', 2), ('1970s', 4), ('1980s', 20), ('1990s', 5), ('2000s', 2), ('2010–2024', 11)] in 1960s-1990s=31
+  trough bins top1_income_share: [('1950s', 3), ('1960s', 2), ('1970s', 7), ('1980s', 18), ('1990s', 5), ('2000s', 4), ('2010–2024', 7)] in 1960s-1990s=32
+  wrote s07_trough_year_hist.png
+== fig08 majority bars ==
+  majority top1_wealth_share: U 12/46 [0.16,0.40]; rise 35/46 [0.62,0.86]
+  majority top10_wealth_share: U 11/46 [0.14,0.38]; rise 32/46 [0.55,0.81]
+  majority top1_income_share: U 22/46 [0.34,0.62]; rise 37/46 [0.67,0.89]
+  majority top10_income_share: U 21/46 [0.32,0.60]; rise 35/46 [0.62,0.86]
+  wrote s08_ushape_vs_rise_bars.png
+== fig09 quality stacks ==
+  stacks top1_wealth_share construction:
+    1950s n=67 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.716, 'unknown': 0.284}
+    1960s n=75 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.667, 'unknown': 0.333}
+    1970s n=69 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.725, 'unknown': 0.275}
+    1980s n=460 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.0, 'unknown': 1.0}
+    1990s n=460 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.0, 'unknown': 1.0}
+    2000s n=460 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.0, 'unknown': 1.0}
+    2010–2024 n=690 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.0, 'unknown': 1.0}
+  stacks top1_wealth_share quality:
+    1950s n=67 {'q0': 0.299, 'q1': 0.0, 'q2': 0.552, 'q3': 0.149, 'q4': 0.0, 'q5': 0.0}
+    1960s n=75 {'q0': 0.28, 'q1': 0.013, 'q2': 0.573, 'q3': 0.027, 'q4': 0.107, 'q5': 0.0}
+    1970s n=69 {'q0': 0.319, 'q1': 0.029, 'q2': 0.304, 'q3': 0.0, 'q4': 0.348, 'q5': 0.0}
+    1980s n=460 {'q0': 0.865, 'q1': 0.004, 'q2': 0.041, 'q3': 0.0, 'q4': 0.067, 'q5': 0.022}
+    1990s n=460 {'q0': 0.793, 'q1': 0.022, 'q2': 0.022, 'q3': 0.011, 'q4': 0.13, 'q5': 0.022}
+    2000s n=460 {'q0': 0.643, 'q1': 0.065, 'q2': 0.017, 'q3': 0.041, 'q4': 0.193, 'q5': 0.039}
+    2010–2024 n=690 {'q0': 0.687, 'q1': 0.036, 'q2': 0.006, 'q3': 0.138, 'q4': 0.106, 'q5': 0.028}
+  stacks top1_income_share construction:
+    1950s n=203 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.833, 'unknown': 0.167}
+    1960s n=205 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.824, 'unknown': 0.176}
+    1970s n=218 {'observed': 0.0, 'partial': 0.0, 'imputed': 0.83, 'unknown': 0.17}
+    1980s n=460 {'observed': 0.261, 'partial': 0.152, 'imputed': 0.217, 'unknown': 0.37}
+    1990s n=460 {'observed': 0.313, 'partial': 0.185, 'imputed': 0.117, 'unknown': 0.385}
+    2000s n=460 {'observed': 0.446, 'partial': 0.074, 'imputed': 0.05, 'unknown': 0.43}
+    2010–2024 n=690 {'observed': 0.248, 'partial': 0.006, 'imputed': 0.271, 'unknown': 0.475}
+  stacks top1_income_share quality:
+    1950s n=203 {'q0': 0.089, 'q1': 0.0, 'q2': 0.044, 'q3': 0.576, 'q4': 0.291, 'q5': 0.0}
+    1960s n=205 {'q0': 0.088, 'q1': 0.0, 'q2': 0.034, 'q3': 0.571, 'q4': 0.268, 'q5': 0.039}
+    1970s n=218 {'q0': 0.078, 'q1': 0.0, 'q2': 0.018, 'q3': 0.564, 'q4': 0.28, 'q5': 0.06}
+    1980s n=460 {'q0': 0.0, 'q1': 0.313, 'q2': 0.12, 'q3': 0.148, 'q4': 0.359, 'q5': 0.061}
+    1990s n=460 {'q0': 0.0, 'q1': 0.176, 'q2': 0.111, 'q3': 0.2, 'q4': 0.428, 'q5': 0.085}
+    2000s n=460 {'q0': 0.0, 'q1': 0.046, 'q2': 0.08, 'q3': 0.211, 'q4': 0.52, 'q5': 0.143}
+    2010–2024 n=690 {'q0': 0.0, 'q1': 0.151, 'q2': 0.041, 'q3': 0.4, 'q4': 0.283, 'q5': 0.126}
+  wrote s09_data_quality_stacks.png
+== fig10 japan vs median ==
+  top1_income_share: JPN 1980=0.105 2024=0.127; median 1980=0.077 (n=46) 2024=0.123 (n=46)
+  top10_income_share: JPN 1980=0.354 2024=0.435; median 1980=0.303 (n=46) 2024=0.359 (n=46)
+  top1_wealth_share: JPN 1980=0.227 2024=0.246; median 1980=0.225 (n=46) 2024=0.275 (n=46)
+  wrote s10_japan_vs_median.png
+== fig11 japan rank ==
+  JPN rank top1_income_share: 1980=13/46 2024=22/46
+  JPN rank top10_income_share: 1980=13/46 2024=15/46
+  JPN rank top1_wealth_share: 1980=23/46 2024=29/46
+  wrote s11_japan_rank.png
+== fig12/13 H2 ==
+  end year T=2022; A1 n=23 A2 n=36
+  scatter d_social_expenditure_gdp: b=+0.4923 se=0.2094 p=0.019 n=23 R2=0.240
+  scatter d_top_pit_rate: b=-0.1163 se=0.0756 p=0.124 n=36 R2=0.131
+  wrote s12_h2_scatter.png
+  coef 1980→2022 top1_income_share social_expenditure_gdp: b=+0.4923 [+0.082, +0.903] p=0.019 n=23
+  coef 1980→2022 top1_income_share tax_revenue_gdp: b=-0.4269 [-0.766, -0.088] p=0.014 n=23
+  coef 1980→2022 top1_wealth_share social_expenditure_gdp: b=+0.6965 [-0.560, +1.953] p=0.277 n=23
+  coef 1980→2022 top1_wealth_share tax_revenue_gdp: b=-0.3324 [-1.191, +0.526] p=0.448 n=23
+  coef 1990→2022（頑健性） top1_income_share social_expenditure_gdp: b=+0.1663 [-0.241, +0.573] p=0.423 n=27
+  coef 1990→2022（頑健性） top1_income_share tax_revenue_gdp: b=-0.1555 [-0.472, +0.161] p=0.336 n=27
+  coef 1990→2022（頑健性） top1_wealth_share social_expenditure_gdp: b=+0.5370 [-0.522, +1.596] p=0.320 n=27
+  coef 1990→2022（頑健性） top1_wealth_share tax_revenue_gdp: b=-0.1132 [-0.751, +0.524] p=0.728 n=27
+  coef 2000→2022 top1_income_share top_pit_rate: b=-0.1163 [-0.264, +0.032] p=0.124 n=36
+  coef 2000→2022 top1_income_share social_expenditure_gdp: b=+0.2750 [-0.321, +0.871] p=0.366 n=36
+  coef 2000→2022 top1_income_share tax_revenue_gdp: b=+0.1251 [-0.336, +0.586] p=0.595 n=36
+  coef 2000→2022 top1_wealth_share top_pit_rate: b=-0.1062 [-0.394, +0.181] p=0.469 n=36
+  coef 2000→2022 top1_wealth_share social_expenditure_gdp: b=+0.0798 [-0.541, +0.700] p=0.801 n=36
+  coef 2000→2022 top1_wealth_share tax_revenue_gdp: b=+0.1695 [-0.237, +0.576] p=0.414 n=36
+  wrote s13_h2_coefficients.png
+== fig14 method ==
+  wrote s14_method_flow.png
