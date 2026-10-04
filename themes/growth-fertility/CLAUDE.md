@@ -34,6 +34,7 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | script | report | 内容 |
 |---|---|---|
 | `analysis/a20261004_h1_income_tfr.py` | `reports/2026-10-04-h1-income-tfr.md`（＋ `.stdout.txt`、`figures/h1_*.png`） | H1: ln GDP pc × TFR の記述統計・プール OLS・二元 FE（国クラスタ SE）・高所得域の J 字検定・頑健性 |
+| `analysis/a20261004_h2_growth_shocks.py` | `reports/2026-10-04-h2-growth-shocks.md`（＋ `.stdout.txt`、`figures/h2_*.png`） | H2: 成長率 × TFR。(a) 同一サンプルの二元 FE で ln GDP pc と成長率ラグ 0–3 の標準化係数・within-R² を比較、(b) ΔTFR の分布ラグ（国 FE）と累積反応、(c) 景気後退（成長率 < −2 %、5 年間隔）のイベントスタディ（−3..+5、端点ビン、国＋年 FE）、(d) 事前リストの異質性・頑健性、2008–09/2020 の記述図。H1 の `OIL_STATES`/`SMALL_POP`/`Est`/`_style` を import。識別戦略なし（関連のみ） |
 | `analysis/a20261004_h3_jp_income_class.py` | `reports/2026-10-04-h3-jp-income-class.md`（＋ `.stdout.txt`、`figures/h3_*.png`） | H3: 日本の所得階級 × 男性有配偶率・児童世帯割合の勾配（階級単位の加重 OLS・Spearman・波間交互作用）と、国間 ln GDP pc × TFR 勾配との符号比較（レベル間比較、記述のみ） |
 | `analysis/a20261004_h3b_age_adjusted.py` | `reports/2026-10-04-h3b-age-adjusted.md`（＋ `.stdout.txt`、`figures/h3b_*.png`） | H3b（H3 の事前に定めた精緻化）: 就業構造基本調査 2022 第40表で男性既婚経験率の所得勾配を年齢調整（年齢階級内勾配・直接法標準化・年齢 FE 付き加重 OLS）し、未調整勾配・H3 の勾配と比較（減衰率）。H3 のヘルパ（`band_midpoint`, `wls`, `band_frame` 等）を import して再利用 |
 
