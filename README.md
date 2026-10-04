@@ -5,7 +5,7 @@
 ## テーマ
 | slug | 問い | 状態 |
 |---|---|---|
-| `wealth-population-distribution` | 戦後、資本主義の進展とともに富の偏りは極端化しているのか（世界各国・日本） | 設計中 |
+| `wealth-population-distribution` | 戦後、資本主義の進展とともに富の偏りは極端化しているのか（世界各国・日本） | WID.world 取得〜mart 実装済み（46 か国） |
 | `growth-fertility` | 経済成長と出生率の関係は国間・国内（所得階層）でフラクタルか | 設計中（World Bank 取得〜stage 実装済み） |
 
 ## セットアップ
