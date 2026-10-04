@@ -37,6 +37,7 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | `analysis/a20261004_h2_growth_shocks.py` | `reports/2026-10-04-h2-growth-shocks.md`（＋ `.stdout.txt`、`figures/h2_*.png`） | H2: 成長率 × TFR。(a) 同一サンプルの二元 FE で ln GDP pc と成長率ラグ 0–3 の標準化係数・within-R² を比較、(b) ΔTFR の分布ラグ（国 FE）と累積反応、(c) 景気後退（成長率 < −2 %、5 年間隔）のイベントスタディ（−3..+5、端点ビン、国＋年 FE）、(d) 事前リストの異質性・頑健性、2008–09/2020 の記述図。H1 の `OIL_STATES`/`SMALL_POP`/`Est`/`_style` を import。識別戦略なし（関連のみ） |
 | `analysis/a20261004_h3_jp_income_class.py` | `reports/2026-10-04-h3-jp-income-class.md`（＋ `.stdout.txt`、`figures/h3_*.png`） | H3: 日本の所得階級 × 男性有配偶率・児童世帯割合の勾配（階級単位の加重 OLS・Spearman・波間交互作用）と、国間 ln GDP pc × TFR 勾配との符号比較（レベル間比較、記述のみ） |
 | `analysis/a20261004_h3b_age_adjusted.py` | `reports/2026-10-04-h3b-age-adjusted.md`（＋ `.stdout.txt`、`figures/h3b_*.png`） | H3b（H3 の事前に定めた精緻化）: 就業構造基本調査 2022 第40表で男性既婚経験率の所得勾配を年齢調整（年齢階級内勾配・直接法標準化・年齢 FE 付き加重 OLS）し、未調整勾配・H3 の勾配と比較（減衰率）。H3 のヘルパ（`band_midpoint`, `wls`, `band_frame` 等）を import して再利用 |
+| `analysis/s20261005_summary.py` | `reports/2026-10-05-summary-growth-fertility.md`（＋ `.stdout.txt`、`figures/summary/s01_*.png`〜`s13_*.png`） | 総括（note.com 向け、日本語・一般読者）: H1〜H3b の結論を同じ mart から**再計算**して 13 枚の図にする（新しい推定なし。H1/H2/H3/H3b の推定関数を import）。図の文字は日本語（フォントは Hiragino Sans → … → Yu Gothic を検出、無ければ DejaVu で警告。下記規約の例外）。PNG は `metadata={"Software": None}` でバイト再現。純粋ヘルパは `tests/test_summary.py` |
 
 ## 規約
 - World Bank の集計地域（World, North America=`NAC`, 所得グループ等）は indicator エンドポイントで `iso3` が 3 文字のまま返ることがある。fetch で `/v2/country` メタデータ（`countries.json`）も取得し、stage 段階で `region.id == "NA"` の経済を除外する（`worldbank.country_set` → `rows_from_response(countries=...)`）。`countries.json` が無いと stage は何も書かない（fail-closed）。
@@ -47,4 +48,4 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 - 就業構造基本調査（`estat_shugyo`）の `year` は**調査年**（所得は調査前 1 年、2021-10〜2022-09）。配偶関係は「総数」「うち未婚」のみなので mart の metric は `ever_married_share`（既婚経験率）であり、`married_share`（配偶者あり率）と混同しない。所得ラベル「50〜99万円」の上限は 100 万円に正規化する。
 - `marts/jp_income_age_marital` は `staged/estat/shugyo_marital_age_income` があるときだけ書かれる（kiso の mart とは独立）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、就業構造基本調査（総務省）を加工」。
 - `marts/jp_income_class_fertility` は WB mart と独立に書かれる（staged/estat が無ければ skip）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、国民生活基礎調査（厚生労働省）を加工」。
-- 分析スクリプトは `reports/figures/` に図を保存し、標準出力を `reports/<date>-<slug>.stdout.txt` に残す（report の数値の出所）。図の文字は matplotlib 同梱フォントで描ける英語にする（日本語フォントに依存させない）。
+- 分析スクリプトは `reports/figures/` に図を保存し、標準出力を `reports/<date>-<slug>.stdout.txt` に残す（report の数値の出所）。図の文字は matplotlib 同梱フォントで描ける英語にする（日本語フォントに依存させない）。例外は一般読者向けの総括（`s20261005_summary.py`、`figures/summary/`）のみ: 日本語フォントを `matplotlib.font_manager` で検出し、無い環境では DejaVu にフォールバックして stderr に警告する（PNG の sha256 はフォント環境に依存する）。
