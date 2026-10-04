@@ -20,13 +20,16 @@ ESTAT_TABLES: dict[estat.TableKind, str] = {
     estat.TableKind.INCOME_DIST_TS: "staged/estat/kiso_income_dist_ts",
     estat.TableKind.WORKERS_MARITAL: "staged/estat/kiso_workers_marital_income",
     estat.TableKind.HH_TYPE: "staged/estat/kiso_hh_type_income",
+    estat.TableKind.SHUGYO_MARITAL_AGE_INCOME: "staged/estat/shugyo_marital_age_income",
 }
 _ESTAT_PARSERS: dict[estat.TableKind, Callable[[bytes, estat.Table], list[dict[str, object]]]] = {
     estat.TableKind.INCOME_DIST_TS: estat.income_dist_rows,
     estat.TableKind.WORKERS_MARITAL: estat.workers_marital_rows,
     estat.TableKind.HH_TYPE: estat.hh_type_rows,
+    estat.TableKind.SHUGYO_MARITAL_AGE_INCOME: estat.shugyo_marital_age_income_rows,
 }
 JP_MART = "marts/jp_income_class_fertility"
+JP_AGE_MART = "marts/jp_income_age_marital"
 
 
 def _sources() -> dict[str, str]:
@@ -55,7 +58,7 @@ def fetch(ctx: Context) -> StageResult:
         )
         written.append(rec.relative_path)
     for table in estat.TABLES:
-        url = estat.file_download_url(table.stat_inf_id)
+        url = table.url
         try:
             payload = ctx.fetcher.fetch(url)
         except FetchError as e:
@@ -63,7 +66,7 @@ def fetch(ctx: Context) -> StageResult:
             continue
         rec = ctx.raw.put(
             theme=THEME,
-            source=estat.SOURCE,
+            source=table.source,
             name=table.raw_name,
             url=url,
             license=estat.LICENSE,
@@ -108,7 +111,7 @@ def _stage_estat(ctx: Context) -> tuple[list[str], list[str]]:
         rows: list[dict[str, object]] = []
         present = 0
         for table in estat.tables_of(kind):
-            payload = ctx.raw.get(theme=THEME, source=estat.SOURCE, name=table.raw_name)
+            payload = ctx.raw.get(theme=THEME, source=table.source, name=table.raw_name)
             if payload is None:
                 skipped.append(f"{table.key}: raw missing (run fetch)")
                 continue
@@ -257,6 +260,65 @@ def build_income_class_fertility(
     return out
 
 
+def build_income_age_marital(rows: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    """Long table for H3b (age-adjusted gradient). Pure and deterministic.
+
+    One row per survey_year × sex × age_class × income_class with metric
+    ``ever_married_share`` = (総数 − うち未婚) / 総数 among 有業者. The 就業構造基本調査 table
+    publishes only 総数 and うち未婚, so the complement is *ever married* (有配偶 + 死別・離別),
+    not 有配偶 alone. ``denominator`` = 総数 persons in the cell. Rows with
+    age_class/income_class = "total" are kept so an unadjusted gradient can be computed from
+    the same source. A missing part -> value None.
+    """
+    cells: dict[tuple[int, str, str, str], dict[str, float | None]] = defaultdict(dict)
+    rep: dict[tuple[int, str, str, str], dict[str, object]] = {}
+    for r in rows:
+        k = (
+            int(str(r["survey_year"])),
+            str(r["sex"]),
+            str(r["age_class"]),
+            str(r["income_class"]),
+        )
+        cells[k][str(r["marital"])] = _f(r["persons"])
+        rep[k] = r
+    out: list[dict[str, object]] = []
+    for k, parts in cells.items():
+        total, never = parts.get("total"), parts.get("never_married")
+        value = None if total is None or never is None else _ratio(total - never, total)
+        r = rep[k]
+        out.append(
+            {
+                "survey": estat.SURVEY_SHUGYO,
+                "survey_year": k[0],
+                "year": int(str(r["year"])),
+                "sex": k[1],
+                "age_class": k[2],
+                "age_lower": r["age_lower"],
+                "age_upper": r["age_upper"],
+                "income_class": k[3],
+                "income_class_lower_yen": r["income_class_lower_yen"],
+                "income_class_upper_yen": r["income_class_upper_yen"],
+                "metric": "ever_married_share",
+                "value": value,
+                "denominator": total,
+                "source": r["source"],
+            }
+        )
+
+    def key(row: dict[str, object]) -> tuple[int, str, int, int, str]:
+        age, lower = row["age_lower"], row["income_class_lower_yen"]
+        return (
+            int(str(row["year"])),
+            str(row["sex"]),
+            -1 if age is None else int(str(age)),
+            -1 if lower is None else int(str(lower)),
+            str(row["income_class"]),
+        )
+
+    out.sort(key=key)
+    return out
+
+
 def mart(ctx: Context) -> StageResult:
     written: list[str] = []
     skipped: list[str] = []
@@ -284,7 +346,12 @@ def mart(ctx: Context) -> StageResult:
             estat_staged[kind] = ctx.tables.read_table(name)
         except FileNotFoundError:
             skipped.append(f"{name}: staged table missing (run stage)")
-    if estat_staged:
+    kiso_kinds = (
+        estat.TableKind.INCOME_DIST_TS,
+        estat.TableKind.WORKERS_MARITAL,
+        estat.TableKind.HH_TYPE,
+    )
+    if any(k in estat_staged for k in kiso_kinds):
         rows = build_income_class_fertility(
             income_dist=estat_staged.get(estat.TableKind.INCOME_DIST_TS, []),
             workers_marital=estat_staged.get(estat.TableKind.WORKERS_MARITAL, []),
@@ -292,4 +359,8 @@ def mart(ctx: Context) -> StageResult:
         )
         ctx.tables.write_table(JP_MART, rows)
         written.append(JP_MART)
+    shugyo = estat_staged.get(estat.TableKind.SHUGYO_MARITAL_AGE_INCOME)
+    if shugyo is not None:
+        ctx.tables.write_table(JP_AGE_MART, build_income_age_marital(shugyo))
+        written.append(JP_AGE_MART)
     return StageResult(stage=Stage.MART, written=tuple(written), skipped=tuple(skipped))

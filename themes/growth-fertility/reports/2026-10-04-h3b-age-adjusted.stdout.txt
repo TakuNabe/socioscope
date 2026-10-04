@@ -1,0 +1,117 @@
+== mart jp_income_age_marital ==
+rows=816 source=['estat_shugyo'] survey=['就業構造基本調査'] survey_year=[2022] metric=['ever_married_share']
+  sex=total  rows=272 ages=15 income_bands=16 persons_total=67,060,400 income_reported=64,885,800 (unknown income 3.2%) null_values=4 ever_married_share(all)=0.6897
+  sex=male   rows=272 ages=15 income_bands=16 persons_total=36,706,200 income_reported=35,838,900 (unknown income 2.4%) null_values=6 ever_married_share(all)=0.6804
+  sex=female rows=272 ages=15 income_bands=16 persons_total=30,354,200 income_reported=29,046,700 (unknown income 4.3%) null_values=9 ever_married_share(all)=0.7010
+
+== analysis cells: men, ages 20-59, bounded income bands ==
+  cells=128 age_classes=8 income_bands=16 waves=[2022]
+  standard age distribution (men 20-59, income total column, 2022): 20-24=0.077, 25-29=0.106, 30-34=0.108, 35-39=0.122, 40-44=0.135, 45-49=0.161, 50-54=0.159, 55-59=0.132
+
+== (a) within-age-class slopes, men (pre-specified main estimand) ==
+-- [A] men, weighted (slope of share on ln(midpoint 万円) within age class; bands as units; 95% t CI) --
+  age 20-24  n_bands=16 slope +0.0278 (se 0.0061) [+0.0146, +0.0410] sign=positive spearman=-0.367
+  age 25-29  n_bands=16 slope +0.1513 (se 0.0258) [+0.0960, +0.2066] sign=positive spearman=+0.800
+  age 30-34  n_bands=16 slope +0.2640 (se 0.0422) [+0.1736, +0.3544] sign=positive spearman=+0.829
+  age 35-39  n_bands=16 slope +0.2390 (se 0.0347) [+0.1644, +0.3135] sign=positive spearman=+0.947
+  age 40-44  n_bands=16 slope +0.2328 (se 0.0282) [+0.1724, +0.2932] sign=positive spearman=+0.944
+  age 45-49  n_bands=16 slope +0.1926 (se 0.0271) [+0.1345, +0.2506] sign=positive spearman=+0.944
+  age 50-54  n_bands=16 slope +0.1626 (se 0.0214) [+0.1168, +0.2084] sign=positive spearman=+0.944
+  age 55-59  n_bands=16 slope +0.1263 (se 0.0143) [+0.0957, +0.1569] sign=positive spearman=+0.974
+
+== (b) direct age standardisation, men 20-59 ==
+  band 0-50       mid=   25.0 standardised_share=0.3934 persons=608,900
+  band 50-100     mid=   75.0 standardised_share=0.3851 persons=790,000
+  band 100-150    mid=  125.0 standardised_share=0.3735 persons=733,700
+  band 150-200    mid=  175.0 standardised_share=0.3615 persons=846,700
+  band 200-250    mid=  225.0 standardised_share=0.3996 persons=1,795,000
+  band 250-300    mid=  275.0 standardised_share=0.4572 persons=1,928,500
+  band 300-400    mid=  350.0 standardised_share=0.5420 persons=4,575,500
+  band 400-500    mid=  450.0 standardised_share=0.6321 persons=4,323,600
+  band 500-600    mid=  550.0 standardised_share=0.6975 persons=3,348,800
+  band 600-700    mid=  650.0 standardised_share=0.7299 persons=2,513,500
+  band 700-800    mid=  750.0 standardised_share=0.7552 persons=1,853,700
+  band 800-900    mid=  850.0 standardised_share=0.7549 persons=1,243,400
+  band 900-1000   mid=  950.0 standardised_share=0.7808 persons=819,000
+  band 1000-1250  mid= 1125.0 standardised_share=0.7934 persons=1,146,600
+  band 1250-1500  mid= 1375.0 standardised_share=0.7690 persons=309,300
+  band 1500-      mid= 1875.0 standardised_share=0.7837 persons=407,900
+  slope of standardised share on ln_mid (weighted by band persons): +0.1639 (se 0.0232) [+0.1142, +0.2136] sign=positive
+
+== (c) pooled WLS with age-class fixed effects, men 20-59 ==
+-- [C] share ~ ln_mid + age FE (weights = persons): n=128 r2=0.9147 --
+  intercept      -0.8194 (se 0.0610) [-0.9401, -0.6986]
+  ln_mid         +0.1691 (se 0.0107) [+0.1479, +0.1903]
+  age[25-29]     +0.0921 (se 0.0355) [+0.0219, +0.1623]
+  age[30-34]     +0.3318 (se 0.0357) [+0.2611, +0.4025]
+  age[35-39]     +0.4487 (se 0.0352) [+0.3790, +0.5185]
+  age[40-44]     +0.5089 (se 0.0348) [+0.4399, +0.5778]
+  age[45-49]     +0.5280 (se 0.0341) [+0.4606, +0.5954]
+  age[50-54]     +0.5514 (se 0.0342) [+0.4836, +0.6192]
+  age[55-59]     +0.6017 (se 0.0352) [+0.5320, +0.6715]
+
+== (d) adjusted vs unadjusted ==
+  (i) same table, age total rows (15+): n_bands=16 slope +0.1240 (se 0.0290) [+0.0617, +0.1863] spearman=+0.900
+      standardised (b): +0.1639 (se 0.0232) [+0.1142, +0.2136]  attenuation = -0.322
+      age-FE (c):       +0.1691 (se 0.0107) [+0.1479, +0.1903]  attenuation = -0.364
+  (ii) H3 report, 国民生活基礎調査 married_share men 15+, income year 2021: n_bands=16 slope +0.1941 (se 0.0154) [+0.1612, +0.2271] spearman=+0.991
+  (ii) H3 report, 国民生活基礎調査 married_share men 15+, income year 2024: n_bands=16 slope +0.1970 (se 0.0173) [+0.1599, +0.2341] spearman=+0.979
+      (different survey, outcome = 配偶者あり share, weights per 100k; sign and rough size only)
+
+== robustness (pre-listed; all shown; men) ==
+  columns: crude = age-total rows of the same table; standardised = direct method (b); age-FE = (c)
+  [base: ages 20-59, top x1.25, weighted] cells=128 ages=8 | crude +0.1240 (se 0.0290) [+0.0617, +0.1863] | standardised +0.1639 (se 0.0232) [+0.1142, +0.2136] | age-FE +0.1691 (se 0.0107) [+0.1479, +0.1903] | attenuation(FE)=-0.36
+  [top-code x1.1] cells=128 ages=8 | crude +0.1243 (se 0.0292) [+0.0616, +0.1871] | standardised +0.1650 (se 0.0232) [+0.1153, +0.2146] | age-FE +0.1702 (se 0.0107) [+0.1490, +0.1914] | attenuation(FE)=-0.37
+  [top-code x1.5] cells=128 ages=8 | crude +0.1233 (se 0.0288) [+0.0616, +0.1850] | standardised +0.1622 (se 0.0232) [+0.1125, +0.2119] | age-FE +0.1673 (se 0.0106) [+0.1462, +0.1884] | attenuation(FE)=-0.36
+  [unweighted] cells=128 ages=8 | crude +0.1260 (se 0.0221) [+0.0785, +0.1735] | standardised +0.1363 (se 0.0186) [+0.0965, +0.1761] | age-FE +0.1290 (se 0.0095) [+0.1101, +0.1478] | attenuation(FE)=-0.02
+  [ages 25-59 (drop 20-24; 15-19 already excluded)] cells=112 ages=7 | crude +0.1240 (se 0.0290) [+0.0617, +0.1863] | standardised +0.1886 (se 0.0251) [+0.1348, +0.2424] | age-FE +0.1883 (se 0.0109) [+0.1667, +0.2098] | attenuation(FE)=-0.52
+  [all ages 15+ (incl. 15-19 and 60+)] cells=234 ages=15 | crude +0.1240 (se 0.0290) [+0.0617, +0.1863] | standardised +0.1217 (se 0.0177) [+0.0837, +0.1598] | age-FE +0.1181 (se 0.0078) [+0.1027, +0.1336] | attenuation(FE)=+0.05 (standardised over 14 ages; ['15-19'] have empty cells)
+  [excluding lowest band 0-50] cells=120 ages=8 | crude +0.1240 (se 0.0290) [+0.0617, +0.1863] | standardised +0.2060 (se 0.0209) [+0.1609, +0.2511] | age-FE +0.2187 (se 0.0106) [+0.1977, +0.2397] | attenuation(FE)=-0.76
+  excluding 所得なし: N/A (the table has no 所得なし class; 50万円未満 is the lowest band)
+-- [R] men, within-age slopes, unweighted (slope of share on ln(midpoint 万円) within age class; bands as units; 95% t CI) --
+  age 20-24  n_bands=16 slope -0.0017 (se 0.0101) [-0.0235, +0.0200] sign=indistinguishable from 0 spearman=-0.367
+  age 25-29  n_bands=16 slope +0.0995 (se 0.0241) [+0.0479, +0.1511] sign=positive spearman=+0.800
+  age 30-34  n_bands=16 slope +0.1728 (se 0.0360) [+0.0955, +0.2501] sign=positive spearman=+0.829
+  age 35-39  n_bands=16 slope +0.1851 (se 0.0267) [+0.1277, +0.2424] sign=positive spearman=+0.947
+  age 40-44  n_bands=16 slope +0.1866 (se 0.0229) [+0.1375, +0.2357] sign=positive spearman=+0.944
+  age 45-49  n_bands=16 slope +0.1516 (se 0.0228) [+0.1027, +0.2005] sign=positive spearman=+0.944
+  age 50-54  n_bands=16 slope +0.1308 (se 0.0180) [+0.0923, +0.1693] sign=positive spearman=+0.944
+  age 55-59  n_bands=16 slope +0.1072 (se 0.0129) [+0.0796, +0.1348] sign=positive spearman=+0.974
+-- [R] men, within-age slopes, all ages 15+ (slope of share on ln(midpoint 万円) within age class; bands as units; 95% t CI) --
+  age 15-19  n_bands=10 slope +0.0068 (se 0.0069) [-0.0092, +0.0228] sign=indistinguishable from 0 spearman=-0.097
+  age 20-24  n_bands=16 slope +0.0278 (se 0.0061) [+0.0146, +0.0410] sign=positive spearman=-0.367
+  age 25-29  n_bands=16 slope +0.1513 (se 0.0258) [+0.0960, +0.2066] sign=positive spearman=+0.800
+  age 30-34  n_bands=16 slope +0.2640 (se 0.0422) [+0.1736, +0.3544] sign=positive spearman=+0.829
+  age 35-39  n_bands=16 slope +0.2390 (se 0.0347) [+0.1644, +0.3135] sign=positive spearman=+0.947
+  age 40-44  n_bands=16 slope +0.2328 (se 0.0282) [+0.1724, +0.2932] sign=positive spearman=+0.944
+  age 45-49  n_bands=16 slope +0.1926 (se 0.0271) [+0.1345, +0.2506] sign=positive spearman=+0.944
+  age 50-54  n_bands=16 slope +0.1626 (se 0.0214) [+0.1168, +0.2084] sign=positive spearman=+0.944
+  age 55-59  n_bands=16 slope +0.1263 (se 0.0143) [+0.0957, +0.1569] sign=positive spearman=+0.974
+  age 60-64  n_bands=16 slope +0.0711 (se 0.0056) [+0.0592, +0.0830] sign=positive spearman=+0.968
+  age 65-69  n_bands=16 slope +0.0316 (se 0.0034) [+0.0244, +0.0388] sign=positive spearman=+0.976
+  age 70-74  n_bands=16 slope +0.0128 (se 0.0031) [+0.0062, +0.0195] sign=positive spearman=+0.732
+  age 75-79  n_bands=16 slope +0.0085 (se 0.0022) [+0.0038, +0.0131] sign=positive spearman=+0.605
+  age 80-84  n_bands=16 slope +0.0020 (se 0.0012) [-0.0006, +0.0046] sign=indistinguishable from 0 spearman=+0.602
+  age 85-    n_bands=16 slope -0.0085 (se 0.0073) [-0.0242, +0.0072] sign=indistinguishable from 0 spearman=+0.150
+
+== EXPLORATORY (not pre-registered): women ==
+-- [X] women, weighted, ages 20-59 (slope of share on ln(midpoint 万円) within age class; bands as units; 95% t CI) --
+  age 20-24  n_bands=14 slope +0.0058 (se 0.0052) [-0.0056, +0.0172] sign=indistinguishable from 0 spearman=-0.560
+  age 25-29  n_bands=15 slope -0.0917 (se 0.0328) [-0.1626, -0.0208] sign=negative spearman=-0.448
+  age 30-34  n_bands=16 slope -0.1023 (se 0.0287) [-0.1640, -0.0407] sign=negative spearman=-0.285
+  age 35-39  n_bands=16 slope -0.1037 (se 0.0239) [-0.1549, -0.0525] sign=negative spearman=-0.026
+  age 40-44  n_bands=16 slope -0.0960 (se 0.0189) [-0.1366, -0.0554] sign=negative spearman=-0.641
+  age 45-49  n_bands=16 slope -0.0907 (se 0.0168) [-0.1267, -0.0547] sign=negative spearman=-0.724
+  age 50-54  n_bands=16 slope -0.0877 (se 0.0159) [-0.1218, -0.0536] sign=negative spearman=-0.385
+  age 55-59  n_bands=16 slope -0.0676 (se 0.0122) [-0.0937, -0.0416] sign=negative spearman=-0.600
+-- [X] women share ~ ln_mid + age FE: n=125 r2=0.9454 --
+  intercept      +0.4659 (se 0.0417) [+0.3833, +0.5484]
+  ln_mid         -0.0816 (se 0.0073) [-0.0960, -0.0672]
+  age[25-29]     +0.2845 (se 0.0263) [+0.2324, +0.3366]
+  age[30-34]     +0.5603 (se 0.0265) [+0.5079, +0.6127]
+  age[35-39]     +0.6736 (se 0.0259) [+0.6223, +0.7248]
+  age[40-44]     +0.7420 (se 0.0253) [+0.6920, +0.7920]
+  age[45-49]     +0.7773 (se 0.0244) [+0.7291, +0.8256]
+  age[50-54]     +0.7962 (se 0.0245) [+0.7477, +0.8447]
+  age[55-59]     +0.8305 (se 0.0255) [+0.7800, +0.8811]
+  [women, ages 20-59] cells=125 ages=8 | crude -0.0711 (se 0.0294) [-0.1341, -0.0081] | standardised -0.0922 (se 0.0167) [-0.1281, -0.0563] | age-FE -0.0816 (se 0.0073) [-0.0960, -0.0672] | attenuation(FE)=-0.15 (standardised over 6 ages; ['20-24', '25-29'] have empty cells)

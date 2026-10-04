@@ -1,18 +1,27 @@
-"""e-Stat (政府統計の総合窓口) file downloads: URL builders and deterministic CSV -> rows (no I/O).
+"""e-Stat (政府統計の総合窓口) file downloads: URL builders and deterministic file -> rows (no I/O).
 
-Source: 国民生活基礎調査（厚生労働省）所得票 statistical tables, fetched through the public
-``stat-search/file-download`` endpoint (no application ID needed). Each table is one CSV
-(CP932, a few preamble lines, multi-row headers, full-width digits). Parsing is fail-closed:
-an unexpected layout raises ``ValueError`` instead of producing a partial table.
+Sources, both fetched through the public ``stat-search/file-download`` endpoint (no
+application ID needed):
+
+- 国民生活基礎調査（厚生労働省）所得票 statistical tables: one CSV each (``fileKind=1``;
+  CP932, a few preamble lines, multi-row headers, full-width digits).
+- 就業構造基本調査（総務省）令和4年 全国編 第40表 (男女×配偶関係×年齢×所得, 有業者): published as
+  an Excel workbook only (``fileKind=0``; CSV returns 404). It is read with the standard
+  library (zipfile + ElementTree), so no spreadsheet dependency is added.
+
+Parsing is fail-closed: an unexpected layout raises ``ValueError`` instead of producing a
+partial table.
 """
 
 import csv
 import io
 import re
 import unicodedata
+import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
+from xml.etree import ElementTree as ET
 
 from pydantic import BaseModel, ConfigDict
 
@@ -23,8 +32,12 @@ LICENSE = (
 )
 SOURCE = "estat_kiso"  # 国民生活基礎調査 (Comprehensive Survey of Living Conditions)
 SURVEY = "国民生活基礎調査"
+SOURCE_SHUGYO = "estat_shugyo"  # 就業構造基本調査 (Employment Status Survey)
+SURVEY_SHUGYO = "就業構造基本調査"
 ENCODING = "cp932"
 MAN_YEN = 10_000
+FILE_KIND_CSV = 1
+FILE_KIND_EXCEL = 0
 
 
 class TableKind(StrEnum):
@@ -33,6 +46,9 @@ class TableKind(StrEnum):
         "workers_marital_income"  # 有業人員，配偶者の有無・性・所得金額階級別 (per 100k)
     )
     HH_TYPE = "hh_type_income"  # 世帯数，世帯類型・所得金額階級別 (per 10k)
+    SHUGYO_MARITAL_AGE_INCOME = (
+        "shugyo_marital_age_income"  # 有業者数，男女・配偶関係・年齢・所得別 (persons, xlsx)
+    )
 
 
 @dataclass(frozen=True)
@@ -42,10 +58,20 @@ class Table:
     kind: TableKind
     survey_year: int
     population: str | None = None  # INCOME_DIST_TS only: "all" | "with_children"
+    file_kind: int = FILE_KIND_CSV
 
     @property
     def raw_name(self) -> str:
-        return f"{self.key}.csv"
+        ext = "csv" if self.file_kind == FILE_KIND_CSV else "xlsx"
+        return f"{self.key}.{ext}"
+
+    @property
+    def source(self) -> str:
+        return SOURCE_SHUGYO if self.kind is TableKind.SHUGYO_MARITAL_AGE_INCOME else SOURCE
+
+    @property
+    def url(self) -> str:
+        return file_download_url(self.stat_inf_id, file_kind=self.file_kind)
 
 
 # 大規模調査年 (every 3 years) carry the 所得票 cross tables. 年次推移 tables are taken from the
@@ -69,11 +95,21 @@ TABLES: tuple[Table, ...] = (
     Table("hh_type_income_2019", "000031957851", TableKind.HH_TYPE, 2019),
     Table("hh_type_income_2022", "000040076424", TableKind.HH_TYPE, 2022),
     Table("hh_type_income_2025", "000040473384", TableKind.HH_TYPE, 2025),
+    # 就業構造基本調査 令和4年 全国編 第40表 (Excel only). No equivalent 配偶関係×年齢×所得 table
+    # for 有業者 exists in the 2017 / 2012 全国編 (checked 2026-10-04), so this is a single wave.
+    Table(
+        "shugyo_marital_age_income_2022",
+        "000040077301",
+        TableKind.SHUGYO_MARITAL_AGE_INCOME,
+        2022,
+        file_kind=FILE_KIND_EXCEL,
+    ),
 )
 
 
-def file_download_url(stat_inf_id: str, *, file_kind: int = 1) -> str:
-    """fileKind=1 is CSV (fileKind=0 Excel is not published for these tables)."""
+def file_download_url(stat_inf_id: str, *, file_kind: int = FILE_KIND_CSV) -> str:
+    """fileKind=1 is CSV, fileKind=0 Excel. The 国民生活基礎調査 tables publish CSV only, the
+    就業構造基本調査 table Excel only (the other kind returns 404)."""
     if not re.fullmatch(r"\d{12}", stat_inf_id):
         msg = f"statInfId must be 12 digits: {stat_inf_id!r}"
         raise ValueError(msg)
@@ -411,3 +447,224 @@ def hh_type_rows(payload: bytes, table: Table) -> list[dict[str, object]]:
 
 def tables_of(kind: TableKind) -> Iterator[Table]:
     return (t for t in TABLES if t.kind is kind)
+
+
+# ---------------------------- 就業構造基本調査 第40表 (xlsx): 男女×配偶関係×年齢×所得, 有業者
+
+_XML_MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+_SHEET = "xl/worksheets/sheet1.xml"
+_SHARED = "xl/sharedStrings.xml"
+
+
+def _col_index(ref: str) -> int:
+    """'A1' -> 1, 'AA3' -> 27 (1-based)."""
+    m = re.match(r"[A-Z]+", ref)
+    if m is None:
+        msg = f"bad cell reference {ref!r}"
+        raise ValueError(msg)
+    n = 0
+    for ch in m.group(0):
+        n = n * 26 + ord(ch) - 64
+    return n
+
+
+def xlsx_rows(payload: bytes) -> list[dict[int, str]]:
+    """First worksheet of an xlsx as a list of {1-based column: text}. Standard library only.
+
+    Handles shared strings (``t="s"``), inline strings (``t="inlineStr"``) and plain values.
+    Empty cells are absent from the dict. Raises ``ValueError`` when *payload* is not an xlsx.
+    """
+    try:
+        z = zipfile.ZipFile(io.BytesIO(payload))
+        names = set(z.namelist())
+        if _SHEET not in names:
+            msg = "xlsx has no first worksheet"
+            raise ValueError(msg)
+        shared: list[str] = []
+        if _SHARED in names:
+            shared = [
+                "".join(t.text or "" for t in si.iter(f"{_XML_MAIN}t"))
+                for si in ET.fromstring(z.read(_SHARED))  # noqa: S314 - trusted public file, stdlib
+            ]
+        sheet = ET.fromstring(z.read(_SHEET))  # noqa: S314
+    except (zipfile.BadZipFile, ET.ParseError, KeyError) as e:
+        msg = "payload is not an xlsx workbook"
+        raise ValueError(msg) from e
+    data = sheet.find(f"{_XML_MAIN}sheetData")
+    if data is None:
+        msg = "xlsx worksheet has no sheetData"
+        raise ValueError(msg)
+    out: list[dict[int, str]] = []
+    for row in data:
+        cells: dict[int, str] = {}
+        for c in row:
+            ref = c.get("r")
+            if ref is None:
+                continue
+            kind = c.get("t")
+            if kind == "inlineStr":
+                text = "".join(t.text or "" for t in c.iter(f"{_XML_MAIN}t"))
+            else:
+                v = c.find(f"{_XML_MAIN}v")
+                if v is None or v.text is None:
+                    continue
+                text = shared[int(v.text)] if kind == "s" else v.text
+            cells[_col_index(ref)] = text
+        out.append(cells)
+    return out
+
+
+class AgeClass(BaseModel):
+    """One 年齢 row label. ``upper`` is exclusive (15～19歳 -> 15, 20); both None for 'total'."""
+
+    model_config = ConfigDict(frozen=True)
+    code: str  # "total" | "<lower>-<upper>" | "<lower>-" (open top)
+    lower: int | None
+    upper: int | None
+
+
+_RE_CODE_PREFIX = re.compile(r"^\d+_")
+_RE_AGE_RANGE = re.compile(r"^(\d+)[~〜-](\d+)歳$")
+_RE_AGE_OVER = re.compile(r"^(\d+)歳以上$")
+_RE_SHUGYO_RANGE = re.compile(r"^(\d+)[~〜-](\d+)万円$")
+
+
+def _strip_code(label: str) -> str:
+    """'03_25～29歳' -> '25～29歳' (e-Stat DB-style labels carry a numeric code prefix)."""
+    return _RE_CODE_PREFIX.sub("", _norm(label))
+
+
+def parse_age_class(label: str) -> AgeClass | None:
+    c = _strip_code(label)
+    if c in {"総数", "合計"}:
+        return AgeClass(code="total", lower=None, upper=None)
+    if m := _RE_AGE_RANGE.match(c):
+        lo, hi = int(m.group(1)), int(m.group(2))
+        if hi < lo:
+            msg = f"age class upper < lower: {label!r}"
+            raise ValueError(msg)
+        return AgeClass(code=f"{lo}-{hi}", lower=lo, upper=hi + 1)
+    if m := _RE_AGE_OVER.match(c):
+        lo = int(m.group(1))
+        return AgeClass(code=f"{lo}-", lower=lo, upper=None)
+    return None
+
+
+def parse_income_class_shugyo(label: str) -> IncomeClass | None:
+    """就業構造基本調査 labels: '02_50～99万円' means 50 <= income < 100 万円, so the upper bound
+    is *hi + 1* (the 国民生活基礎調査 labels '50～100' already carry the exclusive bound)."""
+    c = _strip_code(label)
+    if m := _RE_SHUGYO_RANGE.match(c):
+        lo, hi = int(m.group(1)), int(m.group(2)) + 1
+        if hi <= lo:
+            msg = f"income class upper <= lower: {label!r}"
+            raise ValueError(msg)
+        return IncomeClass(code=f"{lo}-{hi}", lower_yen=lo * MAN_YEN, upper_yen=hi * MAN_YEN)
+    return parse_income_class(c)
+
+
+class ShugyoRow(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    sex: str  # "total" | "male" | "female"
+    marital: str  # "total" | "never_married" (the table publishes 総数 and うち未婚 only)
+    age_class: AgeClass
+    income_class: IncomeClass
+    persons: float | None  # 教育 総数 column, persons (sample-weighted estimate)
+
+
+_SHUGYO_SEX = {"総数": "total", "男": "male", "女": "female"}
+_SHUGYO_MARITAL = {"総数": "total", "うち未婚": "never_married"}
+_SHUGYO_HEADER = {
+    1: "階層レベル",
+    2: "地域区分",
+    4: "男女",
+    6: "配偶関係",
+    8: "年齢",
+    10: "従業上の地位・雇用形態・起業の有無",
+    12: "所得（主な仕事からの年間収入・収益）",
+}
+_C_REGION, _C_SEX, _C_MARITAL, _C_AGE, _C_STATUS, _C_INCOME, _C_VALUE = 2, 4, 6, 8, 10, 12, 13
+
+
+def parse_shugyo_marital_age_income(payload: bytes) -> list[ShugyoRow]:
+    """第40表 (全国): keep 従業上の地位 = 総数 and the 教育 = 総数 column; every
+    男女×配偶関係×年齢×所得 cell becomes one row. Fails closed on title / header / label
+    surprises."""
+    rows = xlsx_rows(payload)
+    title = _norm("".join(c for r in rows[:3] for c in r.values()))
+    for must in ("就業構造基本調査", "配偶関係、年齢", "所得", "有業者"):
+        if _norm(must) not in title:
+            msg = f"table title does not mention {must!r}; wrong table?"
+            raise ValueError(msg)
+    header = next(
+        (
+            i
+            for i, r in enumerate(rows)
+            if all(_norm(r.get(j, "")) == _norm(v) for j, v in _SHUGYO_HEADER.items())
+        ),
+        None,
+    )
+    if header is None:
+        msg = "dimension header row (階層レベル/地域区分/男女/配偶関係/年齢/.../所得) not found"
+        raise ValueError(msg)
+    item_rows = [r for r in rows[:header] if _norm(r.get(_C_INCOME, "")) in {"事項名", "項目名"}]
+    if [_norm(r.get(_C_VALUE, "")) for r in item_rows] != ["教育", "0_総数"]:
+        msg = "expected the first value column to be 教育 = 0_総数"
+        raise ValueError(msg)
+    out: list[ShugyoRow] = []
+    for r in rows[header + 1 :]:
+        if _norm(r.get(_C_REGION, "")) != "00_全国":
+            continue
+        if _strip_code(r.get(_C_STATUS, "")) != "総数":
+            continue
+        sex, marital = _strip_code(r.get(_C_SEX, "")), _strip_code(r.get(_C_MARITAL, ""))
+        if sex not in _SHUGYO_SEX or marital not in _SHUGYO_MARITAL:
+            msg = f"unexpected 男女/配偶関係 labels {sex!r}/{marital!r}"
+            raise ValueError(msg)
+        age = parse_age_class(r.get(_C_AGE, ""))
+        ic = parse_income_class_shugyo(r.get(_C_INCOME, ""))
+        if age is None or ic is None:
+            msg = f"unexpected 年齢/所得 labels {r.get(_C_AGE)!r}/{r.get(_C_INCOME)!r}"
+            raise ValueError(msg)
+        out.append(
+            ShugyoRow(
+                sex=_SHUGYO_SEX[sex],
+                marital=_SHUGYO_MARITAL[marital],
+                age_class=age,
+                income_class=ic,
+                persons=_number(r.get(_C_VALUE, "")),
+            )
+        )
+    if {o.marital for o in out} != set(_SHUGYO_MARITAL.values()):
+        msg = "incomplete 配偶関係 blocks (need 総数 and うち未婚)"
+        raise ValueError(msg)
+    if not any(o.age_class.code == "total" for o in out) or not any(
+        o.income_class.code == "total" for o in out
+    ):
+        msg = "no 総数 age or income rows parsed"
+        raise ValueError(msg)
+    return out
+
+
+def shugyo_marital_age_income_rows(payload: bytes, table: Table) -> list[dict[str, object]]:
+    """Staged rows. ``year`` is the survey year: the 所得 item covers the 12 months before the
+    survey date (2021-10 to 2022-09 for the 2022 survey), not a calendar year."""
+    if table.kind is not TableKind.SHUGYO_MARITAL_AGE_INCOME:
+        msg = f"{table.key} is not a 就業構造基本調査 marital×age×income table"
+        raise ValueError(msg)
+    return [
+        {
+            "survey_year": table.survey_year,
+            "year": table.survey_year,
+            "source": table.source,
+            "stat_inf_id": table.stat_inf_id,
+            "sex": r.sex,
+            "marital": r.marital,
+            "age_class": r.age_class.code,
+            "age_lower": r.age_class.lower,
+            "age_upper": r.age_class.upper,
+            **_class_cols(r.income_class),
+            "persons": r.persons,
+        }
+        for r in parse_shugyo_marital_age_income(payload)
+    ]
