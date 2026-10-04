@@ -21,7 +21,13 @@ class ParquetTableStore:
     def write_table(self, name: str, rows: Sequence[Row]) -> None:
         path = self._path(name)
         path.parent.mkdir(parents=True, exist_ok=True)
-        df = pl.DataFrame([dict(r) for r in rows]) if rows else pl.DataFrame()
+        # infer over every row: a column that is None in the first rows (e.g. long tables whose
+        # early metrics have no `sex`) must still take its type from later rows.
+        df = (
+            pl.DataFrame([dict(r) for r in rows], infer_schema_length=None)
+            if rows
+            else pl.DataFrame()
+        )
         df.write_parquet(path, compression="zstd")
 
     def read_table(self, name: str) -> list[dict[str, object]]:
