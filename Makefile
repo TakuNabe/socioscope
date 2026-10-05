@@ -10,6 +10,8 @@ sync:            ## 依存を同期（全 workspace member）。`.venv` は `ven
 	uv sync --all-packages
 	@if [ -e .venv ] && [ ! -L .venv ]; then echo "legacy .venv/ を削除して venv/ への symlink に置き換えます"; rm -rf .venv; fi
 	@[ -L .venv ] || ln -s "$(UV_PROJECT_ENVIRONMENT)" .venv
+	@# `.claude/worktrees/*` のようにドット名ディレクトリ配下の checkout では venv も iCloud に hidden 化されるため、保険として外す（ADR 0005 追記）
+	@chflags -R nohidden "$(UV_PROJECT_ENVIRONMENT)" 2>/dev/null || true
 
 doctor:          ## 環境診断: workspace member が import できるか／hidden フラグの有無
 	@echo "UV_PROJECT_ENVIRONMENT=$(UV_PROJECT_ENVIRONMENT)"
