@@ -38,3 +38,6 @@ macOS 上でこのリポジトリを `uv sync` / `uv run` すると、しばら�
 ## Consequences
 **良い点**: 再同期しても再発しない（フラグが付く名前空間に venv が無い）。`chflags`・`--no-sync` の運用が不要になり、`uv run` の自動同期をそのまま使える。worktree ごとの環境独立は維持。`make doctor` で症状を一発で診断できる。
 **コスト・リスク**: `.venv` 固定を前提にするツール（一部エディタの自動検出）には `.venv` symlink で対応するが、uv が環境を作り直す際（Python 更新など）に symlink を実体ディレクトリで置き換える可能性がある → `make sync` を再実行すれば戻る。既存 checkout では初回に `make sync` が必要（`uv run` を先に打つと `.venv/` 実体が作られ、やがて hidden 化する）。`.gitkeep` や `.claude` など他のドット項目の hidden 化は本 ADR の範囲外（git の動作には影響しない）。
+
+## 追記（2026-10-05）: ドット名ディレクトリ配下の worktree
+Claude Code のエージェント worktree は `.claude/worktrees/<id>/` に作られる。親の `.claude` がドット名なので iCloud は **その配下すべて**（`venv/` を含む）に hidden フラグを付与し、本 ADR の「ドット名でない venv」が効かない。対処として `make sync` の最後に `chflags -R nohidden venv` を保険として実行する（main checkout では no-op）。worktree 内で `uv run` が自動再同期した場合は再発しうるので、worktree で import エラーが出たら `make sync` を打つ。根本対策はリポジトリを iCloud 同期外に置くこと（上記）。
