@@ -46,6 +46,7 @@ def _fetch_oecd(ctx: Context) -> tuple[list[str], list[str]]:
     skipped: list[str] = []
     if not ctx.wants(oecd.SOURCE):
         return written, skipped
+    fetched = rejected = 0
     for name in sorted(oecd.INDICATORS):
         ind = oecd.INDICATORS[name]
         url = oecd.data_url(ind)
@@ -53,6 +54,11 @@ def _fetch_oecd(ctx: Context) -> tuple[list[str], list[str]]:
             payload = ctx.fetcher.fetch(url)
         except FetchError as e:
             skipped.append(f"oecd/{name}: {e}")
+            continue
+        fetched += 1
+        if not oecd.is_csv_payload(payload):
+            rejected += 1
+            skipped.append(f"oecd/{name}: non-CSV payload (site down?)")
             continue
         rec = ctx.raw.put(
             theme=THEME,
@@ -63,7 +69,17 @@ def _fetch_oecd(ctx: Context) -> tuple[list[str], list[str]]:
             payload=payload,
         )
         written.append(rec.relative_path)
+    _raise_if_all_rejected(oecd.SOURCE, fetched, rejected)
     return written, skipped
+
+
+def _raise_if_all_rejected(source: str, fetched: int, rejected: int) -> None:
+    """Every fetched body was rejected -> the site is most likely down; exit non-zero."""
+    if fetched and rejected == fetched:
+        msg = (
+            f"{source}: all {fetched} fetched payloads were rejected (site down?); nothing written"
+        )
+        raise RuntimeError(msg)
 
 
 def _stage_oecd(ctx: Context) -> tuple[list[str], list[str]]:
@@ -84,12 +100,18 @@ def _stage_oecd(ctx: Context) -> tuple[list[str], list[str]]:
 
 def fetch(ctx: Context) -> StageResult:
     written, skipped = _fetch_oecd(ctx)
+    fetched = rejected = 0
     for iso2 in wid.COUNTRIES if ctx.wants(wid.SOURCE) else ():
         url = wid.country_zip_url(iso2)
         try:
             payload = ctx.fetcher.fetch(url)
         except FetchError as e:
             skipped.append(f"{iso2}: {e}")
+            continue
+        fetched += 1
+        if not wid.is_zip_payload(payload):
+            rejected += 1
+            skipped.append(f"{iso2}: non-zip payload (site down?)")
             continue
         rec = ctx.raw.put(
             theme=THEME,
@@ -100,6 +122,7 @@ def fetch(ctx: Context) -> StageResult:
             payload=payload,
         )
         written.append(rec.relative_path)
+    _raise_if_all_rejected(wid.SOURCE, fetched, rejected)
     return StageResult(stage=Stage.FETCH, written=tuple(written), skipped=tuple(skipped))
 
 

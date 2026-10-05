@@ -2,6 +2,8 @@ import io
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from socioscope_core.core.pipeline import Context, Stage
 from socioscope_core.testing.fakes import FakeFetcher, InMemoryRawStore, InMemoryTableStore
 from theme_wealth_population_distribution import oecd, wid
@@ -47,6 +49,64 @@ def test_fetch_stores_one_zip_per_country_with_license_and_reports_failures() ->
     recs = ctx.raw.records()
     assert len(recs) == 1 and "CC BY-NC-SA 4.0" in recs[0].license
     assert recs[0].url == wid.country_zip_url("JP")
+
+
+HTML_STUB = (
+    b'<!DOCTYPE html><html><head><script>window.location.href="/lander"</script></head></html>'
+)
+
+
+def test_fetch_rejects_non_zip_payload_without_touching_raw_or_manifest() -> None:
+    ctx = make_ctx(
+        {
+            wid.country_zip_url("JP"): HTML_STUB,
+            wid.country_zip_url("FR"): country_zip("FR", FIXTURE.replace(b"JP;", b"FR;")),
+        }
+    )
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert result.written == ("wealth-population-distribution/wid_world/WID_fulldataset_FR.zip",)
+    assert "JP: non-zip payload (site down?)" in result.skipped
+    assert (
+        ctx.raw.get(
+            theme="wealth-population-distribution",
+            source="wid_world",
+            name="WID_fulldataset_JP.zip",
+        )
+        is None
+    )
+    assert [r.name for r in ctx.raw.records()] == ["WID_fulldataset_FR.zip"]
+
+
+def test_fetch_raises_when_every_wid_payload_is_non_zip() -> None:
+    ctx = make_ctx({wid.country_zip_url(c): HTML_STUB for c in wid.COUNTRIES})
+    with pytest.raises(RuntimeError, match="wid_world: all 46"):
+        PIPELINE.run(Stage.FETCH, ctx)
+    assert ctx.raw.records() == []
+
+
+def test_oecd_is_csv_payload_and_fetch_rejects_html() -> None:
+    good = oecd_responses()
+    assert all(oecd.is_csv_payload(p) for p in good.values())
+    assert not oecd.is_csv_payload(HTML_STUB) and not oecd.is_csv_payload(b"<?xml ?><Error/>")
+    bad_url = oecd.data_url(oecd.INDICATORS["top_pit_rate"])
+    ctx = Context(
+        fetcher=FakeFetcher({**good, bad_url: HTML_STUB}),
+        raw=InMemoryRawStore(),
+        tables=InMemoryTableStore(),
+        sources=frozenset({oecd.SOURCE}),
+    )
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert result.skipped == ("oecd/top_pit_rate: non-CSV payload (site down?)",)
+    assert len(result.written) == len(oecd.INDICATORS) - 1
+    assert "top_pit_rate.csv" not in [r.name for r in ctx.raw.records()]
+    all_bad = Context(
+        fetcher=FakeFetcher(dict.fromkeys(good, HTML_STUB)),
+        raw=InMemoryRawStore(),
+        tables=InMemoryTableStore(),
+        sources=frozenset({oecd.SOURCE}),
+    )
+    with pytest.raises(RuntimeError, match="oecd: all 4"):
+        PIPELINE.run(Stage.FETCH, all_bad)
 
 
 def test_fetch_only_oecd_skips_wid_and_stores_one_csv_per_indicator() -> None:

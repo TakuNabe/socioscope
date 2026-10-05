@@ -61,6 +61,18 @@ def country_zip_url(iso2: str) -> str:
     return f"{BASE}/WID_fulldataset_{iso2}.zip"
 
 
+ZIP_MAGIC = b"PK\x03\x04"
+
+
+def is_zip_payload(payload: bytes) -> bool:
+    """True when the bytes start with the local-file-header magic of a zip archive.
+
+    wid.world served a 114-byte HTML parking page with HTTP 200 on 2026-10-05; the fetch must
+    not store such a body as a zip nor record it in the manifest (fail closed).
+    """
+    return payload.startswith(ZIP_MAGIC)
+
+
 @cache
 def _iso_map() -> dict[str, str]:
     text = (
