@@ -35,6 +35,15 @@ def test_iso2_to_iso3_mapping_is_committed_and_drops_non_countries() -> None:
         assert wid.iso2_to_iso3(code) is None
 
 
+def test_is_zip_payload_checks_magic_bytes() -> None:
+    assert wid.is_zip_payload(make_zip({"WID_data_JP.csv": FIXTURE}))
+    html = (
+        b'<!DOCTYPE html><html><head><script>window.location.href="/lander"</script></head></html>'
+    )
+    assert not wid.is_zip_payload(html)
+    assert not wid.is_zip_payload(b"") and not wid.is_zip_payload(b"PK\x05\x06")
+
+
 def test_extract_data_csv_from_country_zip() -> None:
     payload = make_zip({"WID_data_JP.csv": FIXTURE, "README.md": b"x", "WID_metadata_JP.csv": b"y"})
     assert wid.extract_data_csv(payload, "JP") == FIXTURE
