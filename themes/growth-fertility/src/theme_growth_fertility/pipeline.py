@@ -11,7 +11,8 @@ from collections.abc import Callable, Sequence
 
 from socioscope_core.core.pipeline import Context, Stage, StageResult
 from socioscope_core.ports.fetcher import FetchError
-from theme_growth_fertility import dhs, estat, kostat, oecd
+from theme_growth_fertility import dhs, estat, kostat, oecd, surveys
+from theme_growth_fertility import eurobarometer as ebm
 from theme_growth_fertility import eurostat as es
 from theme_growth_fertility import worldbank as wb
 
@@ -131,6 +132,7 @@ def fetch(ctx: Context) -> StageResult:
     written.extend(h5_written)
     skipped.extend(h5_skipped)
     written, skipped = _fetch_kostat(ctx, written, skipped)
+    written, skipped = _fetch_h6(ctx, written, skipped)
     return StageResult(stage=Stage.FETCH, written=tuple(written), skipped=tuple(skipped))
 
 
@@ -209,6 +211,7 @@ def stage(ctx: Context) -> StageResult:
     # ---- H5: OECD / Eurostat
     h5_written, h5_skipped = _stage_h5(ctx)
     dhs_written, dhs_skipped = _stage_kostat(ctx, dhs_written, dhs_skipped)
+    dhs_written, dhs_skipped = _stage_h6(ctx, dhs_written, dhs_skipped)
     return StageResult(
         stage=Stage.STAGE,
         written=tuple(wb_written + es_written + dhs_written + h5_written),
@@ -466,6 +469,7 @@ def mart(ctx: Context) -> StageResult:
     written.extend(h5_written)
     skipped.extend(h5_skipped)
     written, skipped = _mart_kostat(ctx, written, skipped)
+    written, skipped = _mart_h6(ctx, written, skipped)
     return StageResult(stage=Stage.MART, written=tuple(written), skipped=tuple(skipped))
 
 
@@ -660,4 +664,150 @@ def _mart_kostat(
         return written, skipped
     ctx.tables.write_table(KOSTAT_MART, build_kostat_mart(staged_rows))
     written.append(KOSTAT_MART)
+    return written, skipped
+
+
+# ---- H6: fertility ideals / expectations surveys ------------------------------------------
+# Two PDFs (Testa 2012 = Eurobarometer 75.4 appendix; BiB 2025 = GGS-II Table 1) and the
+# Standard Eurobarometer Volume A workbooks (STD91-). The workbook URL is resolved per wave from
+# the dataset's JSON-LD (raw ``eb_<code>_meta.json``) so fetch is two steps; a wave whose record
+# cannot be fetched or has no Volume A is skipped. Same accumulator style as the kostat block.
+
+SURVEYS_EB_TABLE = "staged/surveys/eb2011_ideals"
+SURVEYS_GGS_TABLE = "staged/surveys/ggs2020_ideals"
+EB_EXPECT_TABLE = "staged/eurobarometer/expectations"
+IDEALS_MART = "marts/eu_fertility_ideals"
+EXPECT_MART = "marts/eu_expectations"
+_H6_PDFS: tuple[tuple[str, str, str, str], ...] = (
+    (surveys.TESTA_SOURCE, surveys.TESTA_RAW, surveys.TESTA_URL, surveys.TESTA_LICENSE),
+    (surveys.BIB_SOURCE, surveys.BIB_RAW, surveys.BIB_URL, surveys.BIB_LICENSE),
+)
+
+
+def _fetch_h6(ctx: Context, written: list[str], skipped: list[str]) -> tuple[list[str], list[str]]:
+    for source, name, url, license_ in _H6_PDFS:
+        try:
+            payload = ctx.fetcher.fetch(url)
+        except FetchError as e:
+            skipped.append(f"{name}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME, source=source, name=name, url=url, license=license_, payload=payload
+        )
+        written.append(rec.relative_path)
+    for wave in ebm.WAVES:
+        try:
+            meta = ctx.fetcher.fetch(wave.jsonld_url)
+        except FetchError as e:
+            skipped.append(f"{wave.meta_raw_name}: {e}; Volume A not attempted")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME,
+            source=ebm.SOURCE,
+            name=wave.meta_raw_name,
+            url=wave.jsonld_url,
+            license=ebm.LICENSE,
+            payload=meta,
+        )
+        written.append(rec.relative_path)
+        try:
+            dist = ebm.vol_a(meta)
+        except ValueError as e:
+            skipped.append(f"eb_{wave.code}_vol_a: Volume A not resolved ({e})")
+            continue
+        try:
+            workbook = ctx.fetcher.fetch(dist.url)
+        except FetchError as e:
+            skipped.append(f"{dist.raw_name(wave.code)}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME,
+            source=ebm.SOURCE,
+            name=dist.raw_name(wave.code),
+            url=dist.url,
+            license=ebm.LICENSE,
+            payload=workbook,
+        )
+        written.append(rec.relative_path)
+    return written, skipped
+
+
+def _stage_h6(ctx: Context, written: list[str], skipped: list[str]) -> tuple[list[str], list[str]]:
+    """Each PDF -> its own staged table; all waves -> one expectations table. A PDF or workbook
+    whose layout is not recognised is reported in *skipped* and does not block the others."""
+    testa = ctx.raw.get(theme=THEME, source=surveys.TESTA_SOURCE, name=surveys.TESTA_RAW)
+    if testa is None:
+        skipped.append(f"{surveys.TESTA_RAW}: raw missing (run fetch)")
+    else:
+        try:
+            eb_rows, issues = surveys.eb2011_rows(testa)
+        except ValueError as e:
+            skipped.append(f"{surveys.TESTA_RAW}: layout not recognised ({e})")
+        else:
+            ctx.tables.write_table(SURVEYS_EB_TABLE, eb_rows)
+            written.append(SURVEYS_EB_TABLE)
+            skipped.extend(f"{surveys.TESTA_RAW}: {issue}" for issue in issues)
+    bib = ctx.raw.get(theme=THEME, source=surveys.BIB_SOURCE, name=surveys.BIB_RAW)
+    if bib is None:
+        skipped.append(f"{surveys.BIB_RAW}: raw missing (run fetch)")
+    else:
+        try:
+            ggs = surveys.ggs_rows(bib)
+        except ValueError as e:
+            skipped.append(f"{surveys.BIB_RAW}: layout not recognised ({e})")
+        else:
+            ctx.tables.write_table(SURVEYS_GGS_TABLE, ggs)
+            written.append(SURVEYS_GGS_TABLE)
+    rows: list[dict[str, object]] = []
+    for wave in ebm.WAVES:
+        meta = ctx.raw.get(theme=THEME, source=ebm.SOURCE, name=wave.meta_raw_name)
+        if meta is None:
+            skipped.append(f"{wave.meta_raw_name}: raw missing (run fetch)")
+            continue
+        try:
+            name = ebm.vol_a(meta).raw_name(wave.code)
+        except ValueError as e:
+            skipped.append(f"eb_{wave.code}_vol_a: Volume A not resolved ({e})")
+            continue
+        workbook = ctx.raw.get(theme=THEME, source=ebm.SOURCE, name=name)
+        if workbook is None:
+            skipped.append(f"{name}: raw missing (run fetch)")
+            continue
+        try:
+            wave_rows = ebm.expectation_rows(workbook, wave)
+        except ValueError as e:
+            skipped.append(f"{name}: layout not recognised ({e})")
+            continue
+        if not wave_rows:
+            skipped.append(f"{name}: no 'expectations for the next twelve months' sheet")
+            continue
+        rows.extend(wave_rows)
+    if rows:
+        ctx.tables.write_table(EB_EXPECT_TABLE, rows)
+        written.append(EB_EXPECT_TABLE)
+    return written, skipped
+
+
+def _mart_h6(ctx: Context, written: list[str], skipped: list[str]) -> tuple[list[str], list[str]]:
+    """``eu_fertility_ideals`` from whichever survey tables exist; ``eu_expectations`` from the
+    Standard Eurobarometer table."""
+    ideals: dict[str, list[dict[str, object]]] = {}
+    for table in (SURVEYS_EB_TABLE, SURVEYS_GGS_TABLE):
+        try:
+            ideals[table] = ctx.tables.read_table(table)
+        except FileNotFoundError:
+            skipped.append(f"{table}: staged table missing (run stage)")
+    if ideals:
+        mart_rows = surveys.build_ideals_mart(
+            ideals.get(SURVEYS_EB_TABLE, []), ideals.get(SURVEYS_GGS_TABLE, [])
+        )
+        ctx.tables.write_table(IDEALS_MART, mart_rows)
+        written.append(IDEALS_MART)
+    try:
+        expectations = ctx.tables.read_table(EB_EXPECT_TABLE)
+    except FileNotFoundError:
+        skipped.append(f"{EB_EXPECT_TABLE}: staged table missing (run stage)")
+    else:
+        ctx.tables.write_table(EXPECT_MART, ebm.build_expectations_mart(expectations))
+        written.append(EXPECT_MART)
     return written, skipped

@@ -1,7 +1,7 @@
 """総括レポート（note.com 向け、日本語・一般読者）用の図を生成する決定的スクリプト。
 
-H1〜H5 の 6 レポートの数値を、同じ mart から**再計算**して 18 枚の図にする（新しい推定は行わない。
-既存スクリプト a20261004_h1 / h2 / h3 / h3b / a20261005_h4 / a20261006_h5 の関数で再計算し、
+H1〜H6 の 7 レポートの数値を、同じ mart から**再計算**して 20 枚の図にする（新しい推定は行わない。
+既存スクリプト a20261004_h1 / h2 / h3 / h3b / a20261005_h4 / a20261006_h5 / h6 の関数で再計算し、
 標準出力に数値を出す。乱数は使わない）。
 
     uv run python themes/growth-fertility/src/theme_growth_fertility/analysis/s20261005_summary.py \
@@ -33,6 +33,7 @@ from theme_growth_fertility.analysis import a20261004_h3_jp_income_class as h3
 from theme_growth_fertility.analysis import a20261004_h3b_age_adjusted as h3b
 from theme_growth_fertility.analysis import a20261005_h4_stage_vs_gdp as h4
 from theme_growth_fertility.analysis import a20261006_h5_europe_korea_policy as h5
+from theme_growth_fertility.analysis import a20261006_h6_fertility_ideals as h6
 
 THEME_DIR = Path(__file__).resolve().parents[3]
 REPO_ROOT = THEME_DIR.parents[1]
@@ -44,6 +45,8 @@ SPEND_MART = Path("marts") / "oecd_family_spending.parquet"
 CENSUS_MART = Path("marts") / "eu_census_marital_by_education.parquet"
 ORDER_MART = Path("marts") / "eu_tfr_by_birth_order.parquet"
 KR_MART = Path("marts") / "kr_newlywed_income_children.parquet"
+IDEALS_MART = Path("marts") / "eu_fertility_ideals.parquet"
+EXPECT_MART = Path("marts") / "eu_expectations.parquet"
 
 PREFERRED_FONTS = (
     "Hiragino Sans",
@@ -66,6 +69,40 @@ SRC_DHS = "出典: The DHS Program Indicator Data API (ICF) / World Bank WDI　�
 SRC_SOCX = "出典: OECD SOCX（家族関連公的支出）/ World Bank WDI　分析: socioscope"
 SRC_EUROSTAT = "出典: Eurostat（cens_21me_r2 / demo_fordagec / demo_pjan）　分析: socioscope"
 SRC_KOSTAT = "出典: 国家データ処（韓国）新婚夫婦統計 報道資料（KOGL 第1類型）　分析: socioscope"
+SRC_IDEALS = (
+    "出典: Testa (2012) VID EDRP 2（Eurobarometer 75.4）/ BiB WP 2025（GGS-II, CC BY-SA 4.0）/ WDI"
+    "　分析: socioscope"
+)
+SRC_EXPECT = (
+    "出典: Standard Eurobarometer（欧州委員会、CC BY 4.0）/ World Bank WDI　分析: socioscope"
+)
+EU_NAMES_JA2 = {
+    "AUT": "オーストリア",
+    "EST": "エストニア",
+    "GBR": "英国",
+    "LVA": "ラトビア",
+    "LTU": "リトアニア",
+    "IRL": "アイルランド",
+    "BEL": "ベルギー",
+    "BGR": "ブルガリア",
+    "CYP": "キプロス",
+    "SVK": "スロバキア",
+    "SVN": "スロベニア",
+    "ROU": "ルーマニア",
+    "LUX": "ルクセンブルク",
+    "MLT": "マルタ",
+    "TUR": "トルコ",
+    "ALB": "アルバニア",
+    "HRV": "クロアチア",
+    "CHE": "スイス",
+    "MDA": "モルドバ",
+    "MNE": "モンテネグロ",
+    "SRB": "セルビア",
+    "MKD": "北マケドニア",
+    "BIH": "ボスニア",
+    "PRT": "ポルトガル",
+    "GRC": "ギリシャ",
+}
 SRC_ORDERS_KOSTAT = (
     "出典: Eurostat（demo_fordagec / demo_pjan）/ 国家データ処（韓国）新婚夫婦統計 報道資料"
     + "　分析: socioscope"
@@ -1225,6 +1262,78 @@ def fig18_orders_korea(dec: dict[str, dict[str, float]], kr: pl.DataFrame, path:
     _save(fig, path, SRC_ORDERS_KOSTAT)
 
 
+def _ja(iso3: str) -> str:
+    return EU_NAMES_JA.get(iso3, EU_NAMES_JA2.get(iso3, iso3))
+
+
+def _scatter_ja(
+    ax: Any,
+    frame: pl.DataFrame,
+    xcol: str,
+    ycol: str,
+    *,
+    highlight: Sequence[str],
+    label_all: bool,
+) -> None:
+    x, y = frame[xcol].to_numpy(), frame[ycol].to_numpy()
+    colors = [ORANGE if c in highlight else BLUE for c in frame["iso3"].to_list()]
+    ax.scatter(x, y, s=26, color=colors, edgecolors="none", alpha=0.9)
+    for iso3, xi, yi in zip(frame["iso3"].to_list(), x, y, strict=True):
+        if label_all or iso3 in highlight:
+            ax.annotate(
+                _ja(iso3),
+                (xi, yi),
+                fontsize=7.5,
+                color=INK,
+                xytext=(3, 2),
+                textcoords="offset points",
+            )
+    if len(x) > 2:
+        b = np.polyfit(x, y, 1)
+        xs = np.linspace(float(x.min()), float(x.max()), 20)
+        ax.plot(xs, np.polyval(b, xs), color=MUTED, linewidth=1.2, linestyle="--")
+    _style(ax)
+
+
+def fig19_ideals(level: pl.DataFrame, change: pl.DataFrame, path: Path) -> None:
+    plt = _plt()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.8))
+    _scatter_ja(ax1, level, "ideal", "tfr_start", highlight=h6.NORDIC_EB, label_all=True)
+    ax1.set_xlabel("女性 25–39 歳の理想の子ども数の平均（Eurobarometer 2011）")
+    ax1.set_ylabel("TFR（2011 年）")
+    ax1.set_title(
+        "2011 年: 理想が高い国ほど出生率も高く、北欧は理想が高かった", fontsize=10.5, loc="left"
+    )
+    _scatter_ja(ax2, change, "d_ideal", "d_tfr", highlight=h6.NORDIC_GGS, label_all=True)
+    ax2.axhline(0, color=MUTED, linewidth=0.8)
+    ax2.axvline(0, color=MUTED, linewidth=0.8)
+    ax2.set_xlabel("理想の子ども数の変化（GGS-II 2020–23 − Eurobarometer 2011）")
+    ax2.set_ylabel("TFR の変化（2011 → 2022 年）")
+    ax2.set_title(
+        "2011 → 2020 年代: 理想が下がった国で出生率も下がった（8 か国）", fontsize=10.5, loc="left"
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    _save(fig, path, SRC_IDEALS)
+
+
+def fig20_expectations(frame: pl.DataFrame, path: Path) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(9, 5))
+    _scatter_ja(ax, frame, "optimism", "d_tfr", highlight=("FIN", "SWE", "DNK"), label_all=True)
+    ax.axhline(0, color=MUTED, linewidth=0.8)
+    ax.set_xlabel(
+        "「生活は今後 12 か月で良くなる」−「悪くなる」の差（ポイント、2019–2023 年の平均）"
+    )
+    ax.set_ylabel("TFR の変化（2019 → 2023 年）")
+    ax.set_title(
+        "将来への楽観度は、ここ数年の出生率の変化と関係がない（38 か国、橙 = 北欧）",
+        fontsize=10.5,
+        loc="left",
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    _save(fig, path, SRC_EXPECT)
+
+
 def run(data_dir: Path, fig_dir: Path) -> None:
     font = setup_matplotlib()
     print(f"font={font}")
@@ -1419,6 +1528,30 @@ def run(data_dir: Path, fig_dir: Path) -> None:
         c, _n = h5.korea_slope(kr, yr)
         print(f"  KR {yr}: {c.fmt()}")
     fig18_orders_korea(order_dec, kr, fig_dir / "s18_birth_order_korea.png")
+
+    # H6 recomputed: ideals 2011 vs TFR, change in ideals, expectations
+    ideals = pl.read_parquet(data_dir / IDEALS_MART)
+    eb = h6.ideal_frame(ideals, source="eb2011", metric="ideal_personal_mean", age_class=h6.EB_AGE)
+    level = eb.rename({"value": "ideal"}).join(
+        h6.delta_tfr(panel, h6.EB_YEAR, h6.EB_DELTA_END), on="iso3", how="inner"
+    )
+    r_level, rho_level, _ = h6.corr_stats(level["ideal"].to_numpy(), level["tfr_start"].to_numpy())
+    print(f"== H6 ideals 2011: n={level.height} r={r_level:+.3f} rho={rho_level:+.3f} ==")
+    ggs = h6.ideal_frame(
+        ideals, source="ggs2020", metric="ideal_personal_mean", age_class=h6.GGS_AGE
+    )
+    change = h6.ideal_change(eb, ggs).join(
+        h6.delta_tfr(panel, h6.EB_YEAR, h6.GGS_END), on="iso3", how="inner"
+    )
+    print(change.select("iso3", "d_ideal", "rank", "d_tfr"))
+    fig19_ideals(level, change, fig_dir / "s19_ideals.png")
+    exp = pl.read_parquet(data_dir / EXPECT_MART)
+    opt = h6.mean_optimism(exp, item="life_general").join(
+        h6.delta_tfr(panel, h6.EXP_START, h6.EXP_END), on="iso3", how="inner"
+    )
+    _, rho_opt, _ = h6.corr_stats(opt["optimism"].to_numpy(), opt["d_tfr"].to_numpy())
+    print(f"== H6 expectations: n={opt.height} rho={rho_opt:+.3f} ==")
+    fig20_expectations(opt, fig_dir / "s20_expectations.png")
 
 
 def main() -> None:

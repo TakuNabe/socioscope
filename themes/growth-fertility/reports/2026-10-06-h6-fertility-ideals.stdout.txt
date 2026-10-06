@@ -1,0 +1,206 @@
+== ideals mart ==
+shape: (16, 4)
+┌─────────┬────────────────────────────────┬─────┬───────────┐
+│ source  ┆ metric                         ┆ n   ┆ countries │
+│ ---     ┆ ---                            ┆ --- ┆ ---       │
+│ str     ┆ str                            ┆ u32 ┆ u32       │
+╞═════════╪════════════════════════════════╪═════╪═══════════╡
+│ eb2011  ┆ actual_mean                    ┆ 270 ┆ 27        │
+│ eb2011  ┆ childless_share                ┆ 270 ┆ 27        │
+│ eb2011  ┆ ideal_general_mean             ┆ 270 ┆ 27        │
+│ eb2011  ┆ ideal_general_zero_share       ┆ 270 ┆ 27        │
+│ eb2011  ┆ ideal_high_share               ┆ 323 ┆ 27        │
+│ eb2011  ┆ ideal_low_share                ┆ 323 ┆ 27        │
+│ eb2011  ┆ ideal_personal_mean            ┆ 270 ┆ 27        │
+│ eb2011  ┆ ideal_zero_share               ┆ 323 ┆ 27        │
+│ eb2011  ┆ intended_additional_mean       ┆ 270 ┆ 27        │
+│ eb2011  ┆ intended_additional_zero_share ┆ 267 ┆ 27        │
+│ ggs2020 ┆ actual_mean                    ┆ 44  ┆ 11        │
+│ ggs2020 ┆ gap_ideal_actual               ┆ 44  ┆ 11        │
+│ ggs2020 ┆ gap_ideal_intended             ┆ 44  ┆ 11        │
+│ ggs2020 ┆ gap_intended_actual            ┆ 44  ┆ 11        │
+│ ggs2020 ┆ ideal_personal_mean            ┆ 44  ┆ 11        │
+│ ggs2020 ┆ intended_total_mean            ┆ 44  ┆ 11        │
+└─────────┴────────────────────────────────┴─────┴───────────┘
+
+== (a) 2011 ideals vs TFR level and later change ==
+countries with EB ideal and TFR 2011/2023: 27
+  ideal(F 25-39) vs TFR 2011: n=27 pearson=+0.557 spearman=+0.485 slope +0.5085 (se 0.1515) [+0.1965, +0.8205]
+  ideal(F 25-39) vs ΔTFR 2011->2023: n=27 pearson=-0.478 spearman=-0.537 slope -0.4437 (se 0.1632) [-0.7798, -0.1076]
+  EU median ideal = 2.210; Nordic: DNK 2.62, FIN 2.47, SWE 2.38
+shape: (27, 5)
+┌──────┬───────┬───────────┬─────────┬───────┐
+│ iso3 ┆ ideal ┆ tfr_start ┆ tfr_end ┆ d_tfr │
+│ ---  ┆ ---   ┆ ---       ┆ ---     ┆ ---   │
+│ str  ┆ f64   ┆ f64       ┆ f64     ┆ f64   │
+╞══════╪═══════╪═══════════╪═════════╪═══════╡
+│ AUT  ┆ 1.79  ┆ 1.43      ┆ 1.32    ┆ -0.11 │
+│ ROU  ┆ 1.9   ┆ 1.47      ┆ 1.54    ┆ 0.07  │
+│ CZE  ┆ 1.93  ┆ 1.43      ┆ 1.46    ┆ 0.03  │
+│ ITA  ┆ 1.93  ┆ 1.42      ┆ 1.21    ┆ -0.21 │
+│ SVK  ┆ 1.97  ┆ 1.45      ┆ 1.49    ┆ 0.04  │
+│ HUN  ┆ 1.99  ┆ 1.23      ┆ 1.55    ┆ 0.32  │
+│ BGR  ┆ 2.01  ┆ 1.51      ┆ 1.81    ┆ 0.3   │
+│ DEU  ┆ 2.04  ┆ 1.39      ┆ 1.39    ┆ 0.0   │
+│ MLT  ┆ 2.06  ┆ 1.45      ┆ 1.06    ┆ -0.39 │
+│ PRT  ┆ 2.07  ┆ 1.35      ┆ 1.45    ┆ 0.1   │
+│ ESP  ┆ 2.08  ┆ 1.34      ┆ 1.12    ┆ -0.22 │
+│ POL  ┆ 2.12  ┆ 1.33      ┆ 1.2     ┆ -0.13 │
+│ NLD  ┆ 2.17  ┆ 1.76      ┆ 1.43    ┆ -0.33 │
+│ GRC  ┆ 2.21  ┆ 1.4       ┆ 1.26    ┆ -0.14 │
+│ LUX  ┆ 2.23  ┆ 1.52      ┆ 1.25    ┆ -0.27 │
+│ LTU  ┆ 2.24  ┆ 1.55      ┆ 1.18    ┆ -0.37 │
+│ GBR  ┆ 2.27  ┆ 1.91      ┆ 1.56    ┆ -0.35 │
+│ BEL  ┆ 2.32  ┆ 1.81      ┆ 1.47    ┆ -0.34 │
+│ SVN  ┆ 2.38  ┆ 1.56      ┆ 1.51    ┆ -0.05 │
+│ SWE  ┆ 2.38  ┆ 1.9       ┆ 1.45    ┆ -0.45 │
+│ LVA  ┆ 2.45  ┆ 1.33      ┆ 1.36    ┆ 0.03  │
+│ FIN  ┆ 2.47  ┆ 1.83      ┆ 1.26    ┆ -0.57 │
+│ FRA  ┆ 2.49  ┆ 2.01      ┆ 1.66    ┆ -0.35 │
+│ EST  ┆ 2.5   ┆ 1.61      ┆ 1.31    ┆ -0.3  │
+│ DNK  ┆ 2.62  ┆ 1.75      ┆ 1.5     ┆ -0.25 │
+│ IRL  ┆ 2.66  ┆ 2.03      ┆ 1.5     ┆ -0.53 │
+│ CYP  ┆ 2.7   ┆ 1.36      ┆ 1.389   ┆ 0.029 │
+└──────┴───────┴───────────┴─────────┴───────┘
+  -> (a) level: consistent (r > 0.3); Nordic 2011 ideals above EU median -> 2011 ideals cannot predict the later Nordic decline
+-- robustness (pre-registered): general ideal, all ages, zero-ideal share
+  ideal_general_mean (F 25-39) vs TFR 2011: n=27 pearson=+0.595 spearman=+0.546 slope +0.6163 (se 0.1664) [+0.2736, +0.9591]
+  ideal_general_mean (F 25-39) vs ΔTFR: n=27 pearson=-0.461 spearman=-0.430 slope -0.4865 (se 0.1870) [-0.8717, -0.1012]
+  ideal_personal_mean (F total) vs TFR 2011: n=27 pearson=+0.511 spearman=+0.479 slope +0.4886 (se 0.1642) [+0.1505, +0.8268]
+  ideal_personal_mean (F total) vs ΔTFR: n=27 pearson=-0.511 spearman=-0.574 slope -0.4970 (se 0.1672) [-0.8413, -0.1526]
+  ideal_personal_mean T total: skipped (n=0)
+  ideal_zero_share T total: skipped (n=0)
+  ideal_zero_share (F 25-39) vs TFR 2011: n=27 pearson=+0.020 spearman=+0.008 slope +0.0021 (se 0.0211) [-0.0413, +0.0456]
+  ideal_zero_share (F 25-39) vs ΔTFR: n=27 pearson=-0.172 spearman=-0.235 slope -0.0185 (se 0.0212) [-0.0621, +0.0251]
+
+== (b) change in ideals 2011 -> 2020s (GGS women 30-39 minus EB women 25-39) ==
+shape: (8, 6)
+┌──────┬──────────┬───────────┬─────────┬──────┬───────┐
+│ iso3 ┆ ideal_eb ┆ ideal_ggs ┆ d_ideal ┆ rank ┆ d_tfr │
+│ ---  ┆ ---      ┆ ---       ┆ ---     ┆ ---  ┆ ---   │
+│ str  ┆ f64      ┆ f64       ┆ f64     ┆ i64  ┆ f64   │
+╞══════╪══════════╪═══════════╪═════════╪══════╪═══════╡
+│ AUT  ┆ 1.79     ┆ 2.21      ┆ 0.42    ┆ 8    ┆ -0.02 │
+│ CZE  ┆ 1.93     ┆ 2.12      ┆ 0.19    ┆ 6    ┆ 0.21  │
+│ DEU  ┆ 2.04     ┆ 2.32      ┆ 0.28    ┆ 7    ┆ 0.065 │
+│ DNK  ┆ 2.62     ┆ 2.36      ┆ -0.26   ┆ 2    ┆ -0.2  │
+│ EST  ┆ 2.5      ┆ 2.37      ┆ -0.13   ┆ 3    ┆ -0.2  │
+│ FIN  ┆ 2.47     ┆ 2.1       ┆ -0.37   ┆ 1    ┆ -0.51 │
+│ GBR  ┆ 2.27     ┆ 2.2       ┆ -0.07   ┆ 4    ┆ -0.35 │
+│ NLD  ┆ 2.17     ┆ 2.13      ┆ -0.04   ┆ 5    ┆ -0.27 │
+└──────┴──────────┴───────────┴─────────┴──────┴───────┘
+  Δideal vs ΔTFR 2011->2022: n=8 pearson=+0.798 spearman=+0.690 slope +0.6841 (se 0.2107) [+0.1684, +1.1998]
+  leave-one-out Spearman (drop one country):
+    without AUT: rho=+0.643
+    without CZE: rho=+0.643
+    without DEU: rho=+0.643
+    without DNK: rho=+0.750
+    without EST: rho=+0.750
+    without FIN: rho=+0.536
+    without GBR: rho=+0.714
+    without NLD: rho=+0.714
+  -> (b) undetermined (a Nordic country is missing from the overlap)
+-- robustness: EB all ages (total) vs GGS total
+shape: (8, 6)
+┌──────┬──────────┬───────────┬─────────┬──────┬───────┐
+│ iso3 ┆ ideal_eb ┆ ideal_ggs ┆ d_ideal ┆ rank ┆ d_tfr │
+│ ---  ┆ ---      ┆ ---       ┆ ---     ┆ ---  ┆ ---   │
+│ str  ┆ f64      ┆ f64       ┆ f64     ┆ i64  ┆ f64   │
+╞══════╪══════════╪═══════════╪═════════╪══════╪═══════╡
+│ AUT  ┆ 1.95     ┆ 2.17      ┆ 0.22    ┆ 8    ┆ -0.02 │
+│ CZE  ┆ 2.1      ┆ 2.17      ┆ 0.07    ┆ 7    ┆ 0.21  │
+│ DEU  ┆ 2.27     ┆ 2.28      ┆ 0.01    ┆ 6    ┆ 0.065 │
+│ DNK  ┆ 2.55     ┆ 2.34      ┆ -0.21   ┆ 3    ┆ -0.2  │
+│ EST  ┆ 2.46     ┆ 2.39      ┆ -0.07   ┆ 4    ┆ -0.2  │
+│ FIN  ┆ 2.5      ┆ 2.18      ┆ -0.32   ┆ 1    ┆ -0.51 │
+│ GBR  ┆ 2.33     ┆ 2.3       ┆ -0.03   ┆ 5    ┆ -0.35 │
+│ NLD  ┆ 2.49     ┆ 2.19      ┆ -0.3    ┆ 2    ┆ -0.27 │
+└──────┴──────────┴───────────┴─────────┴──────┴───────┘
+  -> (b, all ages) undetermined (a Nordic country is missing from the overlap)
+-- descriptive: GGS intention-outcome gap (intended total 18-29 minus actual 40-49)
+  (pre-registered descriptive: Nordic = FIN DNK NOR vs others)
+shape: (11, 4)
+┌──────┬────────────────┬──────────────┬──────┐
+│ iso3 ┆ intended_18_29 ┆ actual_40_49 ┆ gap  │
+│ ---  ┆ ---            ┆ ---          ┆ ---  │
+│ str  ┆ f64            ┆ f64          ┆ f64  │
+╞══════╪════════════════╪══════════════╪══════╡
+│ FIN  ┆ 1.82           ┆ 1.81         ┆ 0.01 │
+│ CZE  ┆ 1.94           ┆ 1.87         ┆ 0.07 │
+│ EST  ┆ 2.11           ┆ 2.01         ┆ 0.1  │
+│ NOR  ┆ 2.17           ┆ 1.94         ┆ 0.23 │
+│ AUT  ┆ 1.97           ┆ 1.7          ┆ 0.27 │
+│ DNK  ┆ 2.1            ┆ 1.83         ┆ 0.27 │
+│ NLD  ┆ 2.07           ┆ 1.74         ┆ 0.33 │
+│ HRV  ┆ 2.18           ┆ 1.77         ┆ 0.41 │
+│ DEU  ┆ 1.98           ┆ 1.55         ┆ 0.43 │
+│ GBR  ┆ 2.11           ┆ 1.67         ┆ 0.44 │
+│ MDA  ┆ 2.47           ┆ 1.97         ┆ 0.5  │
+└──────┴────────────────┴──────────────┴──────┘
+
+== (c) expectations (2019-2023) vs ΔTFR 2019->2023 ==
+shape: (4, 5)
+┌──────────────────────┬──────┬───────────┬──────┬──────┐
+│ item                 ┆ rows ┆ countries ┆ from ┆ to   │
+│ ---                  ┆ ---  ┆ ---       ┆ ---  ┆ ---  │
+│ str                  ┆ u32  ┆ u32       ┆ i64  ┆ i64  │
+╞══════════════════════╪══════╪═══════════╪══════╪══════╡
+│ employment_situation ┆ 531  ┆ 39        ┆ 2019 ┆ 2026 │
+│ household_finance    ┆ 531  ┆ 39        ┆ 2019 ┆ 2026 │
+│ life_general         ┆ 531  ┆ 39        ┆ 2019 ┆ 2026 │
+│ national_economy     ┆ 531  ┆ 39        ┆ 2019 ┆ 2026 │
+└──────────────────────┴──────┴───────────┴──────┴──────┘
+  life_general (all waves): n=38 pearson=-0.029 spearman=-0.011 slope -0.0003 (se 0.0016) [-0.0036, +0.0030]
+  -> (c) not supported (|rho| <= 0.3)
+  life_general (excl. 2020-21): n=38 pearson=-0.008 spearman=+0.027 slope -0.0001 (se 0.0017) [-0.0034, +0.0033]
+  household_finance (all waves): n=38 pearson=+0.121 spearman=+0.054 slope +0.0014 (se 0.0020) [-0.0025, +0.0054]
+  household_finance (excl. 2020-21): n=38 pearson=+0.191 spearman=+0.139 slope +0.0022 (se 0.0019) [-0.0016, +0.0059]
+  national_economy (all waves): n=38 pearson=+0.195 spearman=+0.222 slope +0.0017 (se 0.0014) [-0.0012, +0.0045]
+  national_economy (excl. 2020-21): n=38 pearson=+0.299 spearman=+0.329 slope +0.0026 (se 0.0014) [-0.0002, +0.0055]
+  employment_situation (all waves): n=38 pearson=+0.085 spearman=+0.137 slope +0.0008 (se 0.0015) [-0.0023, +0.0039]
+  employment_situation (excl. 2020-21): n=38 pearson=+0.200 spearman=+0.235 slope +0.0022 (se 0.0018) [-0.0014, +0.0058]
+shape: (38, 6)
+┌──────┬───────────┬───────┬───────────┬─────────┬────────┐
+│ iso3 ┆ optimism  ┆ waves ┆ tfr_start ┆ tfr_end ┆ d_tfr  │
+│ ---  ┆ ---       ┆ ---   ┆ ---       ┆ ---     ┆ ---    │
+│ str  ┆ f64       ┆ u32   ┆ f64       ┆ f64     ┆ f64    │
+╞══════╪═══════════╪═══════╪═══════════╪═════════╪════════╡
+│ SVK  ┆ -0.3      ┆ 10    ┆ 1.57      ┆ 1.49    ┆ -0.08  │
+│ POL  ┆ -0.1      ┆ 10    ┆ 1.44      ┆ 1.2     ┆ -0.24  │
+│ TUR  ┆ 1.0       ┆ 9     ┆ 1.89      ┆ 1.51    ┆ -0.38  │
+│ AUT  ┆ 1.8       ┆ 10    ┆ 1.46      ┆ 1.32    ┆ -0.14  │
+│ SVN  ┆ 5.3       ┆ 10    ┆ 1.61      ┆ 1.51    ┆ -0.1   │
+│ GRC  ┆ 5.6       ┆ 10    ┆ 1.34      ┆ 1.26    ┆ -0.08  │
+│ ROU  ┆ 5.9       ┆ 10    ┆ 1.77      ┆ 1.54    ┆ -0.23  │
+│ PRT  ┆ 6.3       ┆ 10    ┆ 1.44      ┆ 1.45    ┆ 0.01   │
+│ HUN  ┆ 7.3       ┆ 10    ┆ 1.58      ┆ 1.55    ┆ -0.03  │
+│ MKD  ┆ 7.555556  ┆ 9     ┆ 1.34      ┆ 1.5     ┆ 0.16   │
+│ CZE  ┆ 8.3       ┆ 10    ┆ 1.71      ┆ 1.46    ┆ -0.25  │
+│ DEU  ┆ 8.3       ┆ 10    ┆ 1.54      ┆ 1.39    ┆ -0.15  │
+│ BGR  ┆ 9.8       ┆ 10    ┆ 1.79      ┆ 1.81    ┆ 0.02   │
+│ CYP  ┆ 11.6      ┆ 10    ┆ 1.33      ┆ 1.389   ┆ 0.059  │
+│ BEL  ┆ 11.9      ┆ 10    ┆ 1.6       ┆ 1.47    ┆ -0.13  │
+│ HRV  ┆ 13.6      ┆ 10    ┆ 1.47      ┆ 1.46    ┆ -0.01  │
+│ ITA  ┆ 14.0      ┆ 10    ┆ 1.27      ┆ 1.21    ┆ -0.06  │
+│ LTU  ┆ 14.1      ┆ 10    ┆ 1.43      ┆ 1.18    ┆ -0.25  │
+│ BIH  ┆ 14.857143 ┆ 7     ┆ 1.509     ┆ 1.486   ┆ -0.023 │
+│ EST  ┆ 17.2      ┆ 10    ┆ 1.66      ┆ 1.31    ┆ -0.35  │
+│ LVA  ┆ 18.7      ┆ 10    ┆ 1.61      ┆ 1.36    ┆ -0.25  │
+│ ESP  ┆ 19.2      ┆ 10    ┆ 1.23      ┆ 1.12    ┆ -0.11  │
+│ FRA  ┆ 20.7      ┆ 10    ┆ 1.86      ┆ 1.66    ┆ -0.2   │
+│ LUX  ┆ 21.2      ┆ 10    ┆ 1.34      ┆ 1.25    ┆ -0.09  │
+│ NLD  ┆ 22.4      ┆ 10    ┆ 1.57      ┆ 1.43    ┆ -0.14  │
+│ CHE  ┆ 22.666667 ┆ 6     ┆ 1.48      ┆ 1.33    ┆ -0.15  │
+│ MLT  ┆ 23.0      ┆ 10    ┆ 1.14      ┆ 1.06    ┆ -0.08  │
+│ SRB  ┆ 23.555556 ┆ 9     ┆ 1.52      ┆ 1.62    ┆ 0.1    │
+│ FIN  ┆ 25.2      ┆ 10    ┆ 1.35      ┆ 1.26    ┆ -0.09  │
+│ MDA  ┆ 26.0      ┆ 3     ┆ 1.78      ┆ 1.731   ┆ -0.049 │
+│ GBR  ┆ 26.1      ┆ 10    ┆ 1.632     ┆ 1.56    ┆ -0.072 │
+│ IRL  ┆ 26.7      ┆ 10    ┆ 1.69      ┆ 1.5     ┆ -0.19  │
+│ DNK  ┆ 27.2      ┆ 10    ┆ 1.7       ┆ 1.5     ┆ -0.2   │
+│ NOR  ┆ 27.666667 ┆ 6     ┆ 1.53      ┆ 1.4     ┆ -0.13  │
+│ MNE  ┆ 28.222222 ┆ 9     ┆ 1.8       ┆ 1.74    ┆ -0.06  │
+│ SWE  ┆ 38.3      ┆ 10    ┆ 1.71      ┆ 1.45    ┆ -0.26  │
+│ ALB  ┆ 44.0      ┆ 9     ┆ 1.395     ┆ 1.348   ┆ -0.047 │
+│ ISL  ┆ 50.5      ┆ 4     ┆ 1.74      ┆ 1.55    ┆ -0.19  │
+└──────┴───────────┴───────┴───────────┴─────────┴────────┘

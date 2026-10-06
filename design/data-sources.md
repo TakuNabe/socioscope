@@ -22,6 +22,8 @@
 | e-Stat — 就業構造基本調査（総務省） | 令和4年 全国編 第40表: 男女×配偶関係×年齢×所得（有業者） | 統計表ファイル直接ダウンロード（`…&fileKind=0`、**Excel のみ**、appId 不要。標準ライブラリで解析） | 同上（確認 2026-10-04） | **採用**（growth-fertility H3b 年齢調整） |
 | DHS Program Indicator Data API | 調査前 3 年の TFR（15–49 歳）× 富裕五分位（`FE_FRTR_W_TFR` × Wealth quintile）、約 90 か国 1990–2025 の DHS/MIS/AIS 調査；国コード表（ISO3） | REST JSON（`api.dhsprogram.com/rest/dhs/data`, `/countries`、API キー不要） | **引用義務**（Terms: 「The DHS Program Indicator Data API, The Demographic and Health Surveys (DHS) Program. ICF. Originally funded by USAID. Available from api.dhsprogram.com. [Accessed 10-05-2026]」。確認 2026-10-05） | **採用**（growth-fertility H4） |
 | 国家データ処（韓国）新婚夫婦統計 報道資料 PDF | 初婚新婚夫婦（婚姻 5 年以内）の所得区間（6 区間＋全体）× 子ども有無・人数・平均子ども数、2015–2024 年基準 | 報道資料掲示板の静的 PDF（`mods.go.kr/boardDownload.es?bid=11815&list_no=…&seq=…`、キー不要。pypdf でテキスト抽出し表をパース） | **公共ヌリ（KOGL）第 1 類型＝出典表示のみ・商用・改変可**（確認 2026-10-06） | **採用**（growth-fertility H5） |
+| Testa (2012) *Family sizes in Europe* 付表（VID/ÖAW EDRP 2、データ＝Eurobarometer 75.4, 2011）＋ BiB (2025) *Intended, ideal and actual fertility in 11 European countries* Table 1（GGS-II 2020–23） | 理想・意図・実際の子ども数の国別平均と分布（EB: EU-27 × 性 × 年齢 15–24/25–39/40–54/55+/計、2011。GGS: 11 か国 × 女性 18–29/30–39/40–49/計、2020–23） | 静的 PDF（`oeaw.ac.at/.../edrp_2012_02.pdf`、`bib.bund.de/Publikation/2025/pdf/...`、キー不要。pypdf でテキスト抽出し付表をパース） | Testa 2012: **ライセンス未明示 → 出典明記で事実の転記のみ、PDF は再配布しない**（EB 75.4 自体は欧州委員会 CC BY 4.0）。BiB 2025: **CC BY-SA 4.0**（本文表記、確認 2026-10-06） | **採用**（growth-fertility H6） |
+| Standard Eurobarometer（data.europa.eu）Volume A | 「今後 12 か月の期待（生活全般・家計・国の経済・国の雇用）」の国別 Better/Worse/Same/DK 割合、STD91（2019 春）〜STD105（2026 春）15 波 | hub API の JSON-LD（`data.europa.eu/api/hub/repo/datasets/<id>.jsonld`）から Volume A の静的 URL（`webgate.ec.europa.eu/ebsm/api/public/odp/download?key=…`、キー不要）を解決して xlsx/xls を取得 | **欧州委員会 再利用方針（Decision 2011/833/EU）＝CC BY 4.0 相当**（JSON-LD も `licence/CC_BY_4_0`。`commission.europa.eu/legal-notice_en`、確認 2026-10-06） | **採用**（growth-fertility H6） |
 | 国立社会保障・人口問題研究所 | 出生動向基本調査、将来推計人口 | CSV/Excel | 要確認 | 候補（日本） |
 | 国税庁 統計年報 / 民間給与実態統計 | 所得分布 | Excel | 政府標準利用規約 | 候補（日本） |
 | 野村総研 富裕層レポート等 | 資産階層別世帯数（推計） | PDF（公開レポート） | 引用のみ | 候補（LLM 構造化対象） |
@@ -170,6 +172,49 @@
   - 2016–2020 年基準資料の 부부 수 は**千쌍単位**（2016–2018 は小数 1 桁、2019–2020 は整数）→ ×1000 で쌍に換算。2021 年以降と 2015 年は実数。最新資料優先のため、mart で千쌍由来なのは 2015（earned_business）・2016・2017・2018 年の行のみ。
   - 共稼ぎ（맞벌이）別・婚姻年次別の平均子ども数は資料にあるが未取込（任意項目）。所得は夫婦合算で、共稼ぎと所得が同時決定（`design/themes/growth-fertility.md` H5 の限界）。
   - 2018 年基準 PDF は本文フォントが抽出で文字化けするが、表部分は正常に抽出される。
+
+### Testa (2012) / Eurobarometer 75.4 と BiB (2025) / GGS-II — 理想・意図・実際の子ども数（growth-fertility H6）
+- URL / API:
+  - Testa, M.R. (2012) *Family sizes in Europe: evidence from the 2011 Eurobarometer survey*. VID European Demographic Research Paper 2: `https://www.oeaw.ac.at/fileadmin/subsites/Institute/VID/PDF/Publications/EDRP/edrp_2012_02.pdf`（100 ページ、~1 MB）。付表 A.1.1（低/高の個人理想、両性、15–39 歳・55 歳以上）、A.2.1–A.2.4（一般理想・個人理想・実際・追加意図の平均、国 × 性 × 年齢 15–24/25–39/40–54/55+/Total）、A.2.5–A.2.8（同じ 4 指標の分布 0/1/2/3+/[理想なし]/DK と N）。
+  - Bundesinstitut für Bevölkerungsforschung (2025) *Intended, ideal and actual fertility in 11 European countries: Evidence on fertility gaps in different age groups from the Generations and Gender Survey*, BiB Working Paper: `https://www.bib.bund.de/Publikation/2025/pdf/Intended-ideal-and-actual-fertility-in-11-European-countries-Evidence-on-fertility-gaps-in-different-age-groups-from-the-Generations-and-Gender-Survey.pdf?__blob=publicationFile&v=2`（31 ページ、~1.8 MB）。Table 1（p. 14）: DE AT NL CZ HR EE NO DK FI MD UK × 年齢（18–29/30–39/40–49/Total）× {意図−実際, 理想−実際, 理想−意図 のギャップ, 実際, 意図（合計）, 個人理想 の平均} ＋ Observations、注記に国別の調査年（GGS-II DE 2021–22, AT 2022–23, NL 2022–23, CZ 2020–22, HR 2023, EE 2021–22, NO 2020, DK 2021, FI 2021–22, MD 2020, UK 2022–23）。
+  - マイクロデータ（GESIS EB、GGP、ESS、EVS）は登録制のため使わない。
+- 対象指標・粒度: `marts/eu_fertility_ideals`（long）。EB2011: iso3（EU-27、ドイツは全体行。東西別・EU-27 行は落とす）× sex（F/M、A.1.1 のみ T）× age_class × metric[`ideal_general_mean` / `ideal_personal_mean` / `actual_mean` / `intended_additional_mean` / `ideal_zero_share`（個人理想 0 の %）/ `ideal_low_share`（0＋1 の %）/ `ideal_high_share`（3+ の %）/ `ideal_general_zero_share` / `childless_share` / `intended_additional_zero_share`]、分布由来の行には N。GGS2020: iso3 × F × age_class × metric[`actual_mean` / `intended_total_mean` / `ideal_personal_mean` / `gap_intended_actual` / `gap_ideal_actual` / `gap_ideal_intended`]、Total 行に N、`survey_year` は調査開始年。割合は**%**（出典のまま）。
+- ライセンス・利用規約（確認日 2026-10-06）: Testa 2012 は VID/ÖAW のワーキングペーパーでライセンス未明示 → 事実（数値）を出典明記で転記するに留め、PDF は再配布しない（raw は gitignore）。基データの Eurobarometer 75.4 は欧州委員会（CC BY 4.0）。BiB 2025 は本文に CC BY-SA 4.0 の表記あり（p. 2）。両者の文言は `surveys.TESTA_LICENSE` / `surveys.BIB_LICENSE` に記載し manifest に残す。出典表記: 「Testa, M.R. (2012) Family sizes in Europe: evidence from the 2011 Eurobarometer survey. VID EDRP 2（data: Eurobarometer 75.4, European Commission）」「BiB (2025) Intended, ideal and actual fertility in 11 European countries, BiB Working Paper（data: GGS-II, CC BY-SA 4.0）」。
+- 取得方法（adapter 名、レート制限）: `theme_growth_fertility.surveys`（`eb2011_rows` / `ggs_rows` / `build_ideals_mart` の純粋変換、pypdf）＋ `pipeline._fetch_h6` / `_stage_h6` / `_mart_h6`。2 リクエスト。raw は `data/raw/growth-fertility/testa2012_eb75_4/testa2012_edrp_2012_02.pdf`、`.../bib2025_ggs2/bib2025_ggs2_fertility_gaps.pdf`。staged は `staged/surveys/eb2011_ideals`、`staged/surveys/ggs2020_ideals`。再取得不要（固定文書）。
+- 既知の欠損・断絶・定義変更:
+  - pypdf の抽出で数値内に空白が入る（「2. 07」）→ 正規化。「United Kingdom」が「United」に、「Czech Rep.」が「Czech」に切れることがある → 別名で補う。分布表の 4 行（A.2.6 イタリア男性 15–24、A.2.8 マルタ 3 ブロック）は数字が混線して読めないため**行を落とし** stage の skipped に「garbled row」として残す（推定しない）。平均表は 27 か国 × 10 列がそろわなければ `ValueError`（fail-closed）。
+  - EB の「追加意図」（additionally intended）と GGS の「意図（合計）」（intended total）は定義が異なる。EB の理想は 15 歳以上全体、GGS は女性 18–49。質問文・母集団が異なるため**水準の比較はできない**（H6 の仮定を参照）。
+  - A.1.1 は両性合計で年齢 15–39/55+ のみ、N なし。GGS の N は国合計のみ（年齢別 N は非掲載）。
+
+### Standard Eurobarometer（data.europa.eu）— 今後 12 か月の期待（growth-fertility H6）
+- URL / API:
+  - データセット記録（JSON-LD）: `https://data.europa.eu/api/hub/repo/datasets/<dataset_id>.jsonld`。配布物 `dcat:Distribution` の `dct:title`（"Link to <file>"）で Volume A（`vol(ume)?_A`、AA/AP/AAP/B/C は除外）を選び `dcat:accessURL`（`https://webgate.ec.europa.eu/{ebsm,eurobarometer}/api/public/odp/download?key=<32 hex>`）を取得する。dataset_id は hub 検索 API（`https://data.europa.eu/api/hub/search/search?q=Standard%20Eurobarometer&limit=100`、2026-10-06）で特定し `theme_growth_fertility.eurobarometer.WAVES` に固定（取得時に検索はしない）:
+    | 波 | dataset_id | 調査時期（season / fieldwork 開始月） | Volume A の形式 |
+    |---|---|---|---|
+    | STD91 | `s2253_91_5_std91_eng` | 2019 H1 / 2019-06 | zip（.xls） |
+    | STD92 | `s2255_92_3_std92_eng` | 2019 H2 / 2019-11 | zip（.xls、EU27＋UK のみ。候補国は別ファイル、未取込） |
+    | STD93 | `s2262_93_1_93_1_eng` | 2020 H1 / 2020-07 | zip（.xlsx） |
+    | STD94 | `s2355_94_1_std94_eng` | 2020 H2 / 2021-02（Winter 2020–21） | .xlsx |
+    | STD95 | `s2532_95_3_95_eng` | 2021 H1 / 2021-06 | .xlsx |
+    | STD96 | `s2553_96_3_std96_eng` | 2021 H2 / 2022-01（Winter 2021–22） | .xlsx |
+    | STD97 | `s2693_97_5_std97_eng` | 2022 H1 / 2022-06 | .xlsx |
+    | STD98 | `s2872_98_2_std98_eng` | 2022 H2 / 2023-01（Winter 2022–23） | .xlsx |
+    | STD99 | `s3052_99_4_std99_eng` | 2023 H1 / 2023-05 | .xlsx |
+    | STD100 | `s3053_100_2_std100_eng` | 2023 H2 / 2023-10 | .xlsx |
+    | STD101 | `s3216_101_3_std101_eng` | 2024 H1 / 2024-04 | .xlsx |
+    | STD102 | `s3215_102_2_std102_eng` | 2024 H2 / 2024-10 | .xlsx |
+    | STD103 | `s3372_103_3_std103_eng` | 2025 H1 / 2025-03 | .xlsx |
+    | STD104 | `s3378_104_1_std104_eng` | 2025 H2 / 2025-10 | .xlsx |
+    | STD105 | `s3613_105_2_std105_eng` | 2026 H1 / 2026-03 | .xlsx |
+  - 2019 春以降で欠けている波はない（2026-10-06）。STD90 以前（2018 年秋まで）は data.europa.eu にあるが未取込（H6 の窓は 2019–）。
+- 対象指標・粒度: `marts/eu_expectations`: iso3 × wave × item[`life_general`（Your life in general）/ `household_finance`（The financial situation of your household）/ `national_economy`（The economic situation in (OUR COUNTRY)、STD100 は "The state of (OUR COUNTRY)'s economy"）/ `employment_situation`（The employment situation in (OUR COUNTRY)）] の `better_share` / `worse_share` / `same_share` / `dk_share`（**%**、加重）と `net_optimism = better − worse`。`fieldwork_year`/`fieldwork_half` は波の season（春・夏＝1、秋・冬＝2、冬の波は前年に帰属）で波ごとに一意、`fieldwork_start` は実際のフィールドワーク開始月（YYYY-MM）。国は EU27 ＋ UK・候補国・EFTA 等（波により 28–37 か国）。EU27 集計、D-W/D-E（DE を使う）、XK、CY(tcc) は落とす。
+- ライセンス・利用規約（確認日 2026-10-06）: 欧州委員会の再利用方針（Commission Decision 2011/833/EU、`https://commission.europa.eu/legal-notice_en`）＝CC BY 4.0 相当。JSON-LD の `dct:license` も `licence/CC_BY_4_0`。出典表記: 「European Commission, Standard Eurobarometer <wave>, Volume A（data.europa.eu）」。
+- 取得方法（adapter 名、レート制限）: `theme_growth_fertility.eurobarometer`（`WAVES`、`vol_a`（JSON-LD → 配布物）、`workbook_sheets`（zip / xlsx=openpyxl read-only / xls=xlrd）、`expectation_rows`、`build_expectations_mart`）＋ `pipeline._fetch_h6` / `_stage_h6` / `_mart_h6`。**30 リクエスト**（JSON-LD 15 ＋ Volume A 15、各 0.4–1 MB、計 ~14 MB）。raw は `data/raw/growth-fertility/eurobarometer_std/eb_<code>_meta.json` と `eb_<code>_vol_a.<zip|xlsx>`。staged は `staged/eurobarometer/expectations`。新しい波は hub 検索で dataset_id を確認して `WAVES` に追加する。
+- 既知の欠損・断絶・定義変更:
+  - シートは質問文（"expectations for the next twelve/12 months"）で探し、英語の項目名で 4 項目に限定する（「国の状況全般」「個人の仕事」「EU の経済」は未取込）。見つからない波は skipped。レイアウト差: STD91–92 は .xls（見出しに "<<Back to content" なし、ラベル TOTAL/DK）、STD93 は仏英ラベルが 1 セル（"Meilleurs\nBetter"）で割合が次行、STD93/STD91 は CY(tcc) 専用シートを別に持つ（国列なしとして無視）。想定外の構造（国見出しなし、回答行欠落、割合が 0–1 でない）は `ValueError` → skipped。
+  - STD92 の Volume A 本体は EU27＋UK のみ（候補国は "with CC" ファイル、未取込）。STD100 は 35 か国（CH/NO/IS なし等、波により調査対象国が変わる）。
+  - 「−」は回答者 0 を意味し 0 として扱う。割合は Volume A の四捨五入済み整数 %（ごく一部は小数）。
+  - 質問は「今後 12 か月の期待」であり不確実性の分散ではない（H6 の限界）。
 
 ## 記録テンプレート（ソース採用時）
 ```
