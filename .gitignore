@@ -34,3 +34,6 @@ __marimo__/
 # Claude Code（個人設定・worktree）
 .claude/settings.local.json
 .claude/worktrees/
+
+# note.com 貼り付け用の生成物（socioscope note-draft）。HTML は大きく、元の report から再生成できる
+exports/

@@ -9,6 +9,7 @@ src/socioscope_core/
     provenance.py   RawRecord（URL・sha256・fetched_at・license・theme）、Manifest 行の生成/解析
     pipeline.py     Stage（fetch/stage/mart）、Pipeline（テーマが登録する stage 関数の束）、Context（Port の束）
     llm_cache.py    LLM 構造化キャッシュのキー（sha256(model|schema_version|prompt)）と行スキーマ
+    note_export.py  report（Markdown）→ note.com 貼り付け用の Markdown/HTML（純粋関数。表→箇条書き、画像→【画像を挿入】）
   ports/       Protocol
     fetcher.py      SourceFetcher: fetch(url) -> bytes
     structurer.py   Structurer: structure(prompt, schema) -> BaseModel
@@ -21,7 +22,7 @@ src/socioscope_core/
     duckdb_catalog.py     build_catalog(db_path, data_dir): staged.* / marts.* の view を張る
     claude_structurer.py  ClaudeStructurer（anthropic messages.parse + data/llm_cache/*.jsonl）
   config.py    Settings（env: ANTHROPIC_API_KEY, SOCIOSCOPE_LLM_MODEL, SOCIOSCOPE_DATA_DIR）
-  cli.py       typer: themes / run <theme> <stage> / db build / db query。結線はここだけ
+  cli.py       typer: themes / run <theme> <stage> / db build / db query / note-draft <report.md>（→ exports/note/、gitignore）。結線はここだけ
 tests/
   （Fake は src/socioscope_core/testing/fakes.py に置く: テーマのテストからも import できるようにするため）
   core/        core のテスト（Fake、高速）
