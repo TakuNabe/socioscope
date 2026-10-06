@@ -7,6 +7,7 @@ src/theme_growth_fertility/
   worldbank.py   World Bank WDI API の URL 組み立てと JSON → 行 の純粋変換（決定的・テスト対象）
   estat.py       e-Stat 統計表（appId 不要）の URL 組み立てと ファイル → 行 の純粋変換（fail-closed）: 国民生活基礎調査 CSV（CP932）と 就業構造基本調査 第40表 xlsx（標準ライブラリで解析）
   dhs.py         DHS Program Indicator Data API（キー不要・引用義務）の URL 組み立てと JSON → 行 の純粋変換（TFR × 富裕五分位、ISO3 付け、fail-closed）
+  kostat.py      国家データ処（韓国）신혼부부통계 報道資料 PDF（KOGL 第 1 類型）: RELEASES（基準年→静的 URL）、pypdf テキスト抽出、所得区間×子ども表の 3 レイアウト解析（fail-closed）
   pipeline.py    fetch / stage / mart（Port 経由。I/O はここだけ。WB・e-Stat・DHS は独立に stage される）
   wiring.py      PIPELINE（entry point）。stage 関数の登録のみ
   analysis/      report 用スクリプト（決定的、seed 固定）
@@ -37,6 +38,8 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | `marts/jp_income_class_fertility` | long（metric 1 行） | survey, survey_year, year, income_class, income_class_lower_yen, income_class_upper_yen, sex, metric, value, denominator, source。metric = `married_share`（性別）, `children_household_share`, `household_share_pct`, `children_household_share_pct`（定義は `design/themes/growth-fertility.md`） |
 | `staged/estat/shugyo_marital_age_income` | 性×配偶関係×年齢階級×所得階級 | survey_year, year（＝調査年 2022）, sex(total/male/female), marital(total/never_married), age_class, age_lower, age_upper（排他的上限）, income_class…, persons, source(`estat_shugyo`), stat_inf_id（3 × 2 × 16 × 17 = 1,632 行。従業上の地位＝総数・教育＝総数のみ） |
 | `marts/jp_income_age_marital` | long（性×年齢×所得、metric 1 行） | survey, survey_year, year, sex, age_class, age_lower, age_upper, income_class, income_class_lower_yen, income_class_upper_yen, metric, value, denominator, source。metric = `ever_married_share` = (総数 − 未婚)/総数（816 行、`value` NULL 19 = 有業者 0 のセル）。年齢・所得の `total` 行も保持 |
+| `staged/kostat/newlywed_income_children` | 報道資料×基準年×所得区間 | release_year, ref_year, population(`first_marriage_within_5y`), income_class(total/lt_1000/1000_3000/3000_5000/5000_7000/7000_10000/ge_10000), income_lower_10k_krw, income_upper_10k_krw（万ウォン、上限なし NULL）, couples, with_children_share, children_1_share, children_2_share, children_3plus_share（割合 0–1）, mean_children, income_concept(earned_business/wage_only), source(`kostat_newlywed`)（10 資料 × 1–2 年 × 7 = 133 行。各資料は前年も再掲） |
+| `marts/kr_newlywed_income_children` | long（基準年×所得概念×所得区間、metric 1 行） | ref_year, release_year, income_class, income_lower_10k_krw, income_upper_10k_krw, metric[with_children_share / mean_children / couples / children_1_share / children_2_share / children_3plus_share], value, income_concept, source。(ref_year, income_concept, income_class) ごとに最新 release を採用し `ref_year, income_concept, income_lower` でソート（11 ブロック × 7 × 6 = 462 行、2015–2024） |
 
 ## 分析スクリプト・レポート
 | script | report | 内容 |
@@ -58,4 +61,5 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 - `marts/jp_income_age_marital` は `staged/estat/shugyo_marital_age_income` があるときだけ書かれる（kiso の mart とは独立）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、就業構造基本調査（総務省）を加工」。
 - `marts/jp_income_class_fertility` は WB mart と独立に書かれる（staged/estat が無ければ skip）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、国民生活基礎調査（厚生労働省）を加工」。
 - DHS（`dhs.py`）: raw は `dhs_tfr_wealth.json` と `dhs_countries.json` の 2 件。stage は両方揃うときだけ `staged/dhs/tfr_by_wealth_quintile` を書く（countries が無いと fail-closed）。ISO3 は `/rest/dhs/countries` の `ISO3_CountryCode` で付け、付かない国コード（`OS`＝Nigeria (Ondo State) 等）は行を落として skipped に残す。`CharacteristicCategory != "Wealth quintile"`・未知ラベル・他指標の行は落とす。`TotalPages != 1` / `RecordCount != len(Data)` は `ValueError`。富裕五分位は**資産ベースの国内相対順位**（所得額ではない）。出典表記（引用義務）: `dhs.LICENSE` の文言をレポートに載せる。mart は WB・e-Stat と独立。
+- 国家データ処 新婚夫婦統計（`kostat.py`）: raw は基準年ごとの PDF `newlywed_<ref_year>.pdf`（`kostat.RELEASES` の静的 URL、KOGL 第 1 類型）。**PDF は pypdf でテキスト抽出し、表のレイアウト差（2015 行×実数 / 2016–2019 行×構成比・千쌍 / 2020–2024 列×年ブロック）は 3 系統のみ解析、それ以外・見出し不一致・合計不一致は `ValueError`（fail-closed）** → stage は該当年を「`newlywed_<year>.pdf: layout not recognised (<reason>)`」として skipped に残し他の年を続行する。2015 年基準は賃金勤労者のみ（`income_concept = wage_only`）で断絶、2016 年基準が 2015 年を 근로＋사업소득 で再掲（`earned_business`）。千쌍単位の資料は ×1000 で쌍に換算。mart は WB・e-Stat・DHS と独立。出典表記: 「국가데이터처, 신혼부부통계（<year>년 기준）, 보도자료, mods.go.kr（KOGL 제1유형）」。新しい基準年を足すときは掲示板で `list_no`/`seq` を確認して `RELEASES` に追加し、`tests/fixtures/kostat_newlywed_<year>.txt`（表ページの pypdf テキスト、`\f` 区切り）でテストする。
 - 分析スクリプトは `reports/figures/` に図を保存し、標準出力を `reports/<date>-<slug>.stdout.txt` に残す（report の数値の出所）。図の文字は matplotlib 同梱フォントで描ける英語にする（日本語フォントに依存させない）。例外は一般読者向けの総括（`s20261005_summary.py`、`figures/summary/`）のみ: 日本語フォントを `matplotlib.font_manager` で検出し、無い環境では DejaVu にフォールバックして stderr に警告する（PNG の sha256 はフォント環境に依存する）。

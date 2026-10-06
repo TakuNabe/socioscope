@@ -11,7 +11,7 @@ from collections.abc import Callable, Sequence
 
 from socioscope_core.core.pipeline import Context, Stage, StageResult
 from socioscope_core.ports.fetcher import FetchError
-from theme_growth_fertility import dhs, estat
+from theme_growth_fertility import dhs, estat, kostat
 from theme_growth_fertility import worldbank as wb
 
 THEME = "growth-fertility"
@@ -95,6 +95,7 @@ def fetch(ctx: Context) -> StageResult:
             payload=payload,
         )
         written.append(rec.relative_path)
+    written, skipped = _fetch_kostat(ctx, written, skipped)
     return StageResult(stage=Stage.FETCH, written=tuple(written), skipped=tuple(skipped))
 
 
@@ -170,6 +171,7 @@ def stage(ctx: Context) -> StageResult:
     wb_written, wb_skipped = _stage_worldbank(ctx)
     es_written, es_skipped = _stage_estat(ctx)
     dhs_written, dhs_skipped = _stage_dhs(ctx)
+    dhs_written, dhs_skipped = _stage_kostat(ctx, dhs_written, dhs_skipped)
     return StageResult(
         stage=Stage.STAGE,
         written=tuple(wb_written + es_written + dhs_written),
@@ -422,4 +424,115 @@ def mart(ctx: Context) -> StageResult:
     else:
         ctx.tables.write_table(DHS_MART, build_dhs_mart(dhs_rows))
         written.append(DHS_MART)
+    written, skipped = _mart_kostat(ctx, written, skipped)
     return StageResult(stage=Stage.MART, written=tuple(written), skipped=tuple(skipped))
+
+
+# ---- H5: Korea newlywed statistics (PDF) ------------------------------------------------
+# 국가데이터처 신혼부부통계 press releases (one PDF per reference year, KOGL type 1). Fetched,
+# staged and marted independently of the sources above; every helper appends to and returns the
+# accumulators it is given so the fetch/stage/mart bodies only need one extra line each.
+
+KOSTAT_TABLE = "staged/kostat/newlywed_income_children"
+KOSTAT_MART = "marts/kr_newlywed_income_children"
+KOSTAT_METRICS: tuple[str, ...] = (
+    "with_children_share",
+    "mean_children",
+    "couples",
+    "children_1_share",
+    "children_2_share",
+    "children_3plus_share",
+)
+
+
+def _fetch_kostat(
+    ctx: Context, written: list[str], skipped: list[str]
+) -> tuple[list[str], list[str]]:
+    for release in kostat.RELEASES:
+        try:
+            payload = ctx.fetcher.fetch(release.url)
+        except FetchError as e:
+            skipped.append(f"{release.raw_name}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME,
+            source=kostat.SOURCE,
+            name=release.raw_name,
+            url=release.url,
+            license=kostat.LICENSE,
+            payload=payload,
+        )
+        written.append(rec.relative_path)
+    return written, skipped
+
+
+def _stage_kostat(
+    ctx: Context, written: list[str], skipped: list[str]
+) -> tuple[list[str], list[str]]:
+    """One staged table concatenating every release whose PDF parses. A release whose table
+    layout is not recognised is reported in *skipped* and does not block the others."""
+    rows: list[dict[str, object]] = []
+    for release in kostat.RELEASES:
+        payload = ctx.raw.get(theme=THEME, source=kostat.SOURCE, name=release.raw_name)
+        if payload is None:
+            skipped.append(f"{release.raw_name}: raw missing (run fetch)")
+            continue
+        try:
+            rows.extend(kostat.income_children_rows(payload, release))
+        except ValueError as e:
+            skipped.append(f"{release.raw_name}: layout not recognised ({e})")
+    if rows:
+        ctx.tables.write_table(KOSTAT_TABLE, rows)
+        written.append(KOSTAT_TABLE)
+    return written, skipped
+
+
+def build_kostat_mart(rows: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    """Long table (one metric per row). Pure and deterministic.
+
+    Consecutive releases re-publish the previous reference year; for each
+    (ref_year, income_concept, income_class) the row from the latest release wins (revisions,
+    and exact counts instead of the thousands printed by older releases).
+    """
+    latest: dict[tuple[int, str, str], dict[str, object]] = {}
+    for r in rows:
+        k = (int(str(r["ref_year"])), str(r["income_concept"]), str(r["income_class"]))
+        cur = latest.get(k)
+        if cur is None or int(str(r["release_year"])) > int(str(cur["release_year"])):
+            latest[k] = r
+
+    def key(k: tuple[int, str, str]) -> tuple[int, str, int]:
+        lower = latest[k]["income_lower_10k_krw"]
+        return (k[0], k[1], -1 if lower is None else int(str(lower)))
+
+    out: list[dict[str, object]] = []
+    for k in sorted(latest, key=key):
+        r = latest[k]
+        for metric in KOSTAT_METRICS:
+            out.append(
+                {
+                    "ref_year": r["ref_year"],
+                    "release_year": r["release_year"],
+                    "income_class": r["income_class"],
+                    "income_lower_10k_krw": r["income_lower_10k_krw"],
+                    "income_upper_10k_krw": r["income_upper_10k_krw"],
+                    "metric": metric,
+                    "value": r[metric],
+                    "income_concept": r["income_concept"],
+                    "source": r["source"],
+                }
+            )
+    return out
+
+
+def _mart_kostat(
+    ctx: Context, written: list[str], skipped: list[str]
+) -> tuple[list[str], list[str]]:
+    try:
+        staged_rows = ctx.tables.read_table(KOSTAT_TABLE)
+    except FileNotFoundError:
+        skipped.append(f"{KOSTAT_TABLE}: staged table missing (run stage)")
+        return written, skipped
+    ctx.tables.write_table(KOSTAT_MART, build_kostat_mart(staged_rows))
+    written.append(KOSTAT_MART)
+    return written, skipped

@@ -10,6 +10,7 @@ dependencies = [
   "pyarrow>=17",
   "statsmodels>=0.14",
   "matplotlib>=3.9",
+  "pypdf>=5.0",
 ]
 
 [project.entry-points."socioscope.themes"]
