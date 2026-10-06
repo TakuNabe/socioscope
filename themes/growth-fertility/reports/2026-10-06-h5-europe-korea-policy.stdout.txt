@@ -364,7 +364,8 @@ shape: (6, 6)
   women South: ITA -0.033 (negative), GRC -0.031 (negative), ESP -0.020 (negative), PRT -0.015 (zero)
 
 == (b) Korea newlywed mart: rows=462 years=[2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024] ==
-  2015 (earned_business): with_children_share ~ ln income: -0.0388 (se 0.0070) [-0.0534, -0.0243] (bands=24); mean_children: -0.0568 (se 0.0105) [-0.0786, -0.0351]
+  2015 (earned_business): with_children_share ~ ln income: -0.0387 (se 0.0130) [-0.0748, -0.0026] (bands=6); mean_children: -0.0589 (se 0.0179) [-0.1086, -0.0092]
+  2015 (wage_only): with_children_share ~ ln income: -0.0454 (se 0.0204) [-0.1021, +0.0114] (bands=6); mean_children: -0.0653 (se 0.0311) [-0.1517, +0.0211]
   2016 (earned_business): with_children_share ~ ln income: -0.0449 (se 0.0128) [-0.0804, -0.0095] (bands=6); mean_children: -0.0676 (se 0.0175) [-0.1163, -0.0190]
   2017 (earned_business): with_children_share ~ ln income: -0.0388 (se 0.0132) [-0.0753, -0.0022] (bands=6); mean_children: -0.0604 (se 0.0164) [-0.1061, -0.0148]
   2018 (earned_business): with_children_share ~ ln income: -0.0435 (se 0.0190) [-0.0964, +0.0094] (bands=6); mean_children: -0.0701 (se 0.0271) [-0.1453, +0.0051]

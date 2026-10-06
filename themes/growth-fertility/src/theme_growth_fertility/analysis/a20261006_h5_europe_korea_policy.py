@@ -183,10 +183,18 @@ def krw_midpoint(
 
 
 def korea_slope(
-    kr: pl.DataFrame, ref_year: int, *, metric: str = "with_children_share"
+    kr: pl.DataFrame,
+    ref_year: int,
+    *,
+    metric: str = "with_children_share",
+    income_concept: str = "earned_business",
 ) -> tuple[Coef, int]:
     """Weighted (couples) slope of *metric* on ln income midpoint across the 6 bands of one year."""
-    y = kr.filter((pl.col("ref_year") == ref_year) & (pl.col("income_class") != "total"))
+    y = kr.filter(
+        (pl.col("ref_year") == ref_year)
+        & (pl.col("income_class") != "total")
+        & (pl.col("income_concept") == income_concept)
+    )
     val = y.filter(pl.col("metric") == metric).select(
         "income_class", "income_lower_10k_krw", "income_upper_10k_krw", "value"
     )
@@ -559,6 +567,7 @@ def fig_korea(kr: pl.DataFrame, path: Path) -> None:
             (pl.col("ref_year") == yr)
             & (pl.col("metric") == "with_children_share")
             & (pl.col("income_class") != "total")
+            & (pl.col("income_concept") == "earned_business")
         ).sort("income_lower_10k_krw")
         mids = [
             krw_midpoint(lo, hi)
@@ -578,9 +587,8 @@ def fig_korea(kr: pl.DataFrame, path: Path) -> None:
     )
     ax.set_ylabel("share of couples with a child", fontsize=8, color=INK)
     ax.set_title(
-        "H5(b) Korea: first-marriage couples within 5 years of marriage, "
-        "share with children by income band\n"
-        "Source: 국가데이터처 신혼부부통계 (KOGL type 1). Dual-earner status not adjusted.",
+        "H5(b) Korea: first-marriage couples <= 5 years married, share with children by income\n"
+        "Source: KOSTAT newlywed-couple statistics (KOGL type 1). Dual earners not adjusted.",
         fontsize=9,
         color=INK,
     )
@@ -764,11 +772,13 @@ def run(data_dir: Path, fig_dir: Path) -> None:
             f"\n== (b) Korea newlywed mart: rows={kr.height} "
             f"years={sorted(kr['ref_year'].unique().to_list())} =="
         )
-        for yr in sorted(kr["ref_year"].unique().to_list()):
-            concept = kr.filter(pl.col("ref_year") == yr)["income_concept"][0]
+        blocks = (
+            kr.select("ref_year", "income_concept").unique().sort(["ref_year", "income_concept"])
+        )
+        for yr, concept in blocks.iter_rows():
             try:
-                c, n = korea_slope(kr, yr)
-                cm, _ = korea_slope(kr, yr, metric="mean_children")
+                c, n = korea_slope(kr, yr, income_concept=concept)
+                cm, _ = korea_slope(kr, yr, metric="mean_children", income_concept=concept)
                 print(
                     f"  {yr} ({concept}): with_children_share ~ ln income: {c.fmt()} "
                     f"(bands={n}); mean_children: {cm.fmt()}"
