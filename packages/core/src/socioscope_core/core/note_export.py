@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import html
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 _IMG = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)\)")
+_PLACEHOLDER = re.compile(r"^【画像を挿入: ([^】]+)】$")
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 _CODE = re.compile(r"`([^`]+)`")
 _BOLD = re.compile(r"\*\*(.+?)\*\*")
@@ -79,8 +81,17 @@ def _table_to_bullets(rows: list[list[str]]) -> list[str]:
     return bullets
 
 
-def convert_report(markdown: str) -> NoteDraft:
-    """Convert report Markdown into a note-ready Markdown body plus an HTML rendering."""
+def _placeholder(name: str) -> str:
+    return f"【画像を挿入: {name}】"
+
+
+def convert_report(markdown: str, embedded: Mapping[str, str] | None = None) -> NoteDraft:
+    """Convert report Markdown into a note-ready Markdown body plus an HTML rendering.
+
+    ``embedded`` maps an image basename to an ``src`` (typically a ``data:`` URI). Images found
+    there are rendered as ``<img>`` in the HTML; the Markdown always keeps the placeholder.
+    """
+    embedded = embedded or {}
     title = ""
     images: list[str] = []
     tables = 0
@@ -170,9 +181,33 @@ def convert_report(markdown: str) -> NoteDraft:
             i += 1
             continue
 
+        def image_block(ref: str, alt: str) -> None:
+            images.append(ref)
+            name = ref.rsplit("/", 1)[-1]
+            md_lines.append(_placeholder(name))
+            src = embedded.get(name)
+            if src is None:
+                html_blocks.append(f"<p>{html.escape(_placeholder(name))}</p>")
+            else:
+                alt_text = html.escape(alt or name, quote=True)
+                html_blocks.append(
+                    f'<p><img src="{html.escape(src, quote=True)}" alt="{alt_text}"></p>'
+                )
+
+        pm = _PLACEHOLDER.match(line.strip())
+        im = _IMG.fullmatch(line.strip())
+        if pm or im:
+            flush()
+            if pm:
+                image_block(pm.group(1).strip(), "")
+            elif im:
+                image_block(im.group(2), im.group(1))
+            i += 1
+            continue
+
         def repl_img(m: re.Match[str]) -> str:
             images.append(m.group(2))
-            return f"【画像を挿入: {m.group(2).rsplit('/', 1)[-1]}】"
+            return _placeholder(m.group(2).rsplit("/", 1)[-1])
 
         line = _IMG.sub(repl_img, line)
 
