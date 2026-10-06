@@ -1,5 +1,7 @@
 """socioscope CLI — the only place where adapters are wired to ports (ADR 0001)."""
 
+import shutil
+import subprocess
 from importlib.metadata import entry_points
 from pathlib import Path
 
@@ -12,6 +14,7 @@ from socioscope_core.adapters.filesystem_raw import FilesystemRawStore
 from socioscope_core.adapters.http_fetcher import HttpxFetcher
 from socioscope_core.adapters.parquet_store import ParquetTableStore
 from socioscope_core.config import Settings
+from socioscope_core.core.note_export import convert_report
 from socioscope_core.core.pipeline import Context, Pipeline, Stage
 
 app = typer.Typer(
@@ -95,3 +98,55 @@ def db_query(sql: str, path: Path = Path("socioscope.duckdb")) -> None:
         raise typer.Exit(2)
     for row in duck_query(path, sql):
         typer.echo("\t".join("" if v is None else str(v) for v in row))
+
+
+NOTE_EXPORT_DIR = Path("exports/note")
+
+
+@app.command("note-draft")
+def note_draft(
+    report: Path,
+    out: Path = typer.Option(  # noqa: B008
+        NOTE_EXPORT_DIR, "--out", help="Output directory (gitignored; regenerable from the report)."
+    ),
+    copy: bool = typer.Option(
+        False, "--copy", help="Also put the HTML on the macOS clipboard (rich-text paste)."
+    ),
+) -> None:
+    """Convert a report into note.com-ready text (<stem>.note.md / .note.html) and list images.
+
+    note.com has no public write API, so the draft is created by pasting: open a new note,
+    paste the HTML (rich text) or the Markdown, then upload the listed figures at each
+    「【画像を挿入: …】」 placeholder.
+    """
+    if not report.exists():
+        typer.echo(f"{report} not found", err=True)
+        raise typer.Exit(2)
+    draft = convert_report(report.read_text(encoding="utf-8"))
+    out.mkdir(parents=True, exist_ok=True)
+    md_path = out / f"{report.stem}.md"
+    html_path = out / f"{report.stem}.html"
+    md_path.write_text(draft.markdown, encoding="utf-8")
+    html_path.write_text(draft.html, encoding="utf-8")
+    typer.echo(f"title    {draft.title}")
+    typer.echo(f"written  {md_path}")
+    typer.echo(f"written  {html_path}")
+    if draft.tables:
+        typer.echo(
+            f"note     {draft.tables} table(s) converted to bullet lists (note has no tables)"
+        )
+    for img in draft.images:
+        typer.echo(f"image    {(report.parent / img).resolve()}")
+    if copy:
+        copy_html_to_clipboard(draft.html)
+        typer.echo("copied   HTML to clipboard")
+
+
+def copy_html_to_clipboard(html: str) -> None:
+    """Place HTML on the macOS clipboard via osascript so the note editor pastes it as rich text."""
+    osascript = shutil.which("osascript")
+    if osascript is None:
+        typer.echo("--copy needs macOS osascript; skipped", err=True)
+        return
+    script = f"set the clipboard to «data HTML{html.encode('utf-8').hex()}»"
+    subprocess.run([osascript, "-e", script], check=True)  # noqa: S603

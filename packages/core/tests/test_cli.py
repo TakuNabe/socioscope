@@ -32,3 +32,32 @@ def test_run_passes_only_filter_into_context(monkeypatch: pytest.MonkeyPatch) ->
     r = runner.invoke(cli.app, ["run", "demo", "fetch"])
     assert r.exit_code == 0
     assert seen == [frozenset({"oecd", "wb"}), None]
+
+
+def test_note_draft_writes_md_and_html_and_lists_images(tmp_path) -> None:
+    report = tmp_path / "reports" / "2026-10-06-h6.md"
+    report.parent.mkdir()
+    report.write_text(
+        "# タイトル\n\n## 結果\n![図](figures/a.png)\n\n| x | y |\n|---|---|\n| 1 | 2 |\n",
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    r = runner.invoke(cli.app, ["note-draft", str(report), "--out", str(tmp_path / "out")])
+    assert r.exit_code == 0, r.output
+    md = (tmp_path / "out" / "2026-10-06-h6.md").read_text(encoding="utf-8")
+    html = (tmp_path / "out" / "2026-10-06-h6.html").read_text(encoding="utf-8")
+    assert "【画像を挿入: a.png】" in md and "<h2>結果</h2>" in html
+    assert "title    タイトル" in r.output
+    assert str((report.parent / "figures" / "a.png").resolve()) in r.output
+    assert "1 table(s)" in r.output
+
+
+def test_note_draft_defaults_to_exports_dir_and_rejects_missing(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    report = tmp_path / "r.md"
+    report.write_text("# t\nbody\n", encoding="utf-8")
+    runner = CliRunner()
+    assert runner.invoke(cli.app, ["note-draft", str(report)]).exit_code == 0
+    assert (tmp_path / "exports" / "note" / "r.md").exists()
+    assert (tmp_path / "exports" / "note" / "r.html").exists()
+    assert runner.invoke(cli.app, ["note-draft", str(tmp_path / "nope.md")]).exit_code == 2
