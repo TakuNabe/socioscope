@@ -116,7 +116,6 @@ def growth_fertility() -> Path:
     # right: within Japan
     ax2 = fig.add_axes([0.59, 0.12, 0.36, 0.55])
     vals = jp["value"].to_numpy() * 100
-    labels = jp["income_class"].to_list()
     idx = np.arange(len(vals))
     ax2.bar(idx, vals, color=ORANGE, width=0.72, alpha=0.9)
     ax2.set_xticks([0, 5, 10, len(vals) - 1])
