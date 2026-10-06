@@ -1,0 +1,454 @@
+== sample ==
+H1 frame: n=6792 countries=199
+H4 frame (listwise on stage vars): n=3622 G=171 years 1990-2024
+stage variable coverage within H1 frame (non-null rows):
+shape: (1, 5)
+┌──────────────┬───────────────┬─────────────┬─────────┬──────────┐
+│ u5_mortality ┆ fem_sec_enrol ┆ urban_share ┆ fem_lfp ┆ life_exp │
+│ ---          ┆ ---           ┆ ---         ┆ ---     ┆ ---      │
+│ u32          ┆ u32           ┆ u32         ┆ u32     ┆ u32      │
+╞══════════════╪═══════════════╪═════════════╪═════════╪══════════╡
+│ 6485         ┆ 3979          ┆ 6792        ┆ 6121    ┆ 6792     │
+└──────────────┴───────────────┴─────────────┴─────────┴──────────┘
+correlations with ln_gdp in the H4 frame:
+shape: (1, 5)
+┌──────────────┬───────────────┬─────────────┬───────────┬──────────┐
+│ u5_mortality ┆ fem_sec_enrol ┆ urban_share ┆ fem_lfp   ┆ life_exp │
+│ ---          ┆ ---           ┆ ---         ┆ ---       ┆ ---      │
+│ f64          ┆ f64           ┆ f64         ┆ f64       ┆ f64      │
+╞══════════════╪═══════════════╪═════════════╪═══════════╪══════════╡
+│ -0.75855     ┆ 0.822569      ┆ 0.805606    ┆ -0.083812 ┆ 0.829093 │
+└──────────────┴───────────────┴─────────────┴───────────┴──────────┘
+
+== (a)(b) main: between attenuation and within with stage controls (same sample) ==
+[M A0] between: ln_gdp only                                n= 3622 G=171
+  ln_gdp: -0.9412 (se 0.0755) [-1.0891, -0.7933]
+  r2=0.6248
+[M A+u5_mortality] between: ln_gdp + u5_mortality          n= 3622 G=171
+  ln_gdp: -0.3792 (se 0.0809) [-0.5378, -0.2206]
+  u5_mortality: +0.0204 (se 0.0021) [+0.0164, +0.0245]
+  r2=0.7644
+[M A+fem_sec_enrol] between: ln_gdp + fem_sec_enrol        n= 3622 G=171
+  ln_gdp: -0.3265 (se 0.0961) [-0.5149, -0.1382]
+  fem_sec_enrol: -0.0288 (se 0.0042) [-0.0369, -0.0206]
+  r2=0.7283
+[M A+urban_share] between: ln_gdp + urban_share            n= 3622 G=171
+  ln_gdp: -0.9530 (se 0.0926) [-1.1345, -0.7715]
+  urban_share: +0.0008 (se 0.0043) [-0.0076, +0.0091]
+  r2=0.6249
+[M A+fem_lfp] between: ln_gdp + fem_lfp                    n= 3622 G=171
+  ln_gdp: -0.9329 (se 0.0736) [-1.0772, -0.7887]
+  fem_lfp: +0.0053 (se 0.0050) [-0.0045, +0.0150]
+  r2=0.6275
+[M A+life_exp] between: ln_gdp + life_exp                  n= 3622 G=171
+  ln_gdp: -0.3471 (se 0.1089) [-0.5606, -0.1336]
+  life_exp: -0.0982 (se 0.0161) [-0.1298, -0.0667]
+  r2=0.7176
+[M A_all] between: ln_gdp + all stage vars                 n= 3622 G=171
+  ln_gdp: -0.1846 (se 0.1106) [-0.4014, +0.0322]
+  u5_mortality: +0.0143 (se 0.0025) [+0.0094, +0.0193]
+  fem_sec_enrol: -0.0160 (se 0.0037) [-0.0232, -0.0088]
+  urban_share: +0.0054 (se 0.0043) [-0.0031, +0.0139]
+  fem_lfp: -0.0046 (se 0.0041) [-0.0126, +0.0035]
+  life_exp: -0.0184 (se 0.0146) [-0.0470, +0.0101]
+  r2=0.7958
+[M A_stage] between: stage vars only (no ln_gdp)           n= 3622 G=171
+  u5_mortality: +0.0144 (se 0.0026) [+0.0094, +0.0194]
+  fem_sec_enrol: -0.0181 (se 0.0035) [-0.0250, -0.0112]
+  urban_share: +0.0020 (se 0.0042) [-0.0063, +0.0102]
+  fem_lfp: -0.0055 (se 0.0043) [-0.0139, +0.0030]
+  life_exp: -0.0263 (se 0.0141) [-0.0541, +0.0014]
+  r2=0.7922
+[M B0] two-way FE: ln_gdp only                             n= 3622 G=171
+  ln_gdp: +0.1315 (se 0.1410) [-0.1448, +0.4079]
+  r2=0.9613
+[M B_all] two-way FE: ln_gdp + all stage vars              n= 3622 G=171
+  ln_gdp: +0.3207 (se 0.1162) [+0.0930, +0.5484]
+  u5_mortality: +0.0029 (se 0.0023) [-0.0016, +0.0073]
+  fem_sec_enrol: -0.0090 (se 0.0022) [-0.0134, -0.0046]
+  urban_share: -0.0185 (se 0.0072) [-0.0326, -0.0044]
+  fem_lfp: -0.0096 (se 0.0058) [-0.0209, +0.0018]
+  life_exp: -0.0195 (se 0.0169) [-0.0526, +0.0135]
+  r2=0.9692
+  -> (a) attenuation ratio = -0.1846 / -0.9412 = 0.196: consistent with H4(a) (ratio <= 0.5)
+  -> (b) within ln_gdp | stage: CI [+0.0930, +0.5484]: consistent with H4(b) (CI lower bound >= 0)
+
+== (a)(b) standardised stage variables (coefficients per 1 SD) ==
+[M std] between: ln_gdp + stage (1 SD units)               n= 3622 G=171
+  ln_gdp: -0.1846 (se 0.1106) [-0.4014, +0.0322]
+  u5_mortality: +0.6723 (se 0.1180) [+0.4410, +0.9037]
+  fem_sec_enrol: -0.5302 (se 0.1224) [-0.7700, -0.2903]
+  urban_share: +0.1237 (se 0.0992) [-0.0708, +0.3181]
+  fem_lfp: -0.0714 (se 0.0644) [-0.1977, +0.0549]
+  life_exp: -0.1695 (se 0.1341) [-0.4323, +0.0934]
+  r2=0.7958
+[M std] two-way FE: ln_gdp + stage (1 SD units)            n= 3622 G=171
+  ln_gdp: +0.3207 (se 0.1162) [+0.0930, +0.5484]
+  u5_mortality: +0.1342 (se 0.1063) [-0.0742, +0.3426]
+  fem_sec_enrol: -0.2982 (se 0.0740) [-0.4433, -0.1531]
+  urban_share: -0.4244 (se 0.1648) [-0.7473, -0.1014]
+  fem_lfp: -0.1499 (se 0.0908) [-0.3279, +0.0281]
+  life_exp: -0.1798 (se 0.1552) [-0.4839, +0.1244]
+  r2=0.9692
+
+== (c) cross-country slope within under-5 mortality bands (same H4 sample) ==
+[M C-all] between, all bands pooled                        n= 3622 G=171
+  ln_gdp: -0.9412 (se 0.0755) [-1.0891, -0.7933]
+  r2=0.6248
+[M C-U5MR 0-10] between within band                        n= 1111 G= 66
+  ln_gdp: +0.0435 (se 0.0668) [-0.0874, +0.1744]
+  r2=0.0524
+[M C-U5MR 10-25] between within band                       n=  991 G= 79
+  ln_gdp: -0.3043 (se 0.1625) [-0.6228, +0.0142]
+  r2=0.1906
+[M C-U5MR 25-50] between within band                       n=  585 G= 74
+  ln_gdp: -0.4843 (se 0.2134) [-0.9025, -0.0661]
+  r2=0.1742
+[M C-U5MR 50-100] between within band                      n=  540 G= 68
+  ln_gdp: -0.4192 (se 0.1687) [-0.7499, -0.0885]
+  r2=0.1914
+[M C-U5MR >= 100] between within band                      n=  395 G= 44
+  ln_gdp: -0.5118 (se 0.2360) [-0.9743, -0.0493]
+  r2=0.1467
+  -> (c) not supported
+
+== (c) on the larger H1 frame restricted only to u5_mortality (robustness) ==
+[R-u5only C-all] between, all bands pooled                 n= 6485 G=188
+  ln_gdp: -1.0346 (se 0.0597) [-1.1516, -0.9175]
+  r2=0.6129
+[R-u5only C-U5MR 0-10] between within band                 n= 1633 G= 75
+  ln_gdp: -0.0029 (se 0.0652) [-0.1307, +0.1248]
+  r2=0.0262
+[R-u5only C-U5MR 10-25] between within band                n= 1744 G=107
+  ln_gdp: -0.2750 (se 0.1591) [-0.5868, +0.0367]
+  r2=0.0603
+[R-u5only C-U5MR 25-50] between within band                n= 1163 G= 96
+  ln_gdp: -0.5289 (se 0.1733) [-0.8686, -0.1891]
+  r2=0.1650
+[R-u5only C-U5MR 50-100] between within band               n= 1089 G= 87
+  ln_gdp: -0.3690 (se 0.1553) [-0.6733, -0.0647]
+  r2=0.1428
+[R-u5only C-U5MR >= 100] between within band               n=  856 G= 53
+  ln_gdp: -0.5008 (se 0.1738) [-0.8414, -0.1602]
+  r2=0.1503
+  -> (c) not supported
+
+== (a)(b)(c) robustness (pre-registered list) ==
+-- drop oil states: n=3295 countries=152
+[R drop oil states A0] between: ln_gdp only                n= 3295 G=152
+  ln_gdp: -1.0576 (se 0.0720) [-1.1987, -0.9165]
+  r2=0.6911
+[R drop oil states A_all] between: ln_gdp + all stage vars n= 3295 G=152
+  ln_gdp: -0.3738 (se 0.1182) [-0.6054, -0.1422]
+  u5_mortality: +0.0161 (se 0.0025) [+0.0111, +0.0210]
+  fem_sec_enrol: -0.0123 (se 0.0038) [-0.0197, -0.0049]
+  urban_share: +0.0034 (se 0.0044) [-0.0052, +0.0120]
+  fem_lfp: -0.0036 (se 0.0046) [-0.0125, +0.0053]
+  life_exp: +0.0003 (se 0.0144) [-0.0279, +0.0285]
+  r2=0.8139
+[R drop oil states B0] two-way FE: ln_gdp only             n= 3295 G=152
+  ln_gdp: -0.0051 (se 0.1579) [-0.3147, +0.3044]
+  r2=0.9648
+[R drop oil states B_all] two-way FE: ln_gdp + all stage vars n= 3295 G=152
+  ln_gdp: +0.2264 (se 0.1303) [-0.0290, +0.4819]
+  u5_mortality: +0.0051 (se 0.0023) [+0.0006, +0.0095]
+  fem_sec_enrol: -0.0079 (se 0.0020) [-0.0118, -0.0040]
+  urban_share: -0.0204 (se 0.0075) [-0.0351, -0.0057]
+  fem_lfp: -0.0056 (se 0.0061) [-0.0176, +0.0065]
+  life_exp: -0.0026 (se 0.0153) [-0.0326, +0.0274]
+  r2=0.9727
+  -> (a) attenuation ratio = -0.3738 / -1.0576 = 0.353: consistent with H4(a) (ratio <= 0.5)
+  -> (b) within ln_gdp | stage: CI [-0.0290, +0.4819]: undetermined (CI includes 0)
+[R drop oil states C-all] between, all bands pooled        n= 3295 G=152
+  ln_gdp: -1.0576 (se 0.0720) [-1.1987, -0.9165]
+  r2=0.6911
+[R drop oil states C-U5MR 0-10] between within band        n= 1046 G= 59
+  ln_gdp: -0.0051 (se 0.0665) [-0.1354, +0.1252]
+  r2=0.0584
+[R drop oil states C-U5MR 10-25] between within band       n=  841 G= 66
+  ln_gdp: -0.9485 (se 0.1828) [-1.3068, -0.5902]
+  r2=0.4036
+[R drop oil states C-U5MR 25-50] between within band       n=  527 G= 65
+  ln_gdp: -0.6213 (se 0.1864) [-0.9867, -0.2560]
+  r2=0.2095
+[R drop oil states C-U5MR 50-100] between within band      n=  519 G= 62
+  ln_gdp: -0.5625 (se 0.1514) [-0.8593, -0.2657]
+  r2=0.2380
+[R drop oil states C-U5MR >= 100] between within band      n=  362 G= 41
+  ln_gdp: -0.7721 (se 0.2954) [-1.3510, -0.1931]
+  r2=0.1953
+  -> (c) not supported
+-- drop population < 1,000,000: n=3099 countries=148
+[R drop population < 1,000,000 A0] between: ln_gdp only    n= 3099 G=148
+  ln_gdp: -0.9941 (se 0.0789) [-1.1487, -0.8395]
+  r2=0.6332
+[R drop population < 1,000,000 A_all] between: ln_gdp + all stage vars n= 3099 G=148
+  ln_gdp: -0.1493 (se 0.1276) [-0.3993, +0.1008]
+  u5_mortality: +0.0169 (se 0.0027) [+0.0115, +0.0222]
+  fem_sec_enrol: -0.0183 (se 0.0039) [-0.0259, -0.0108]
+  urban_share: +0.0100 (se 0.0044) [+0.0014, +0.0185]
+  fem_lfp: -0.0050 (se 0.0044) [-0.0135, +0.0036]
+  life_exp: -0.0155 (se 0.0143) [-0.0436, +0.0126]
+  r2=0.8241
+[R drop population < 1,000,000 B0] two-way FE: ln_gdp only n= 3099 G=148
+  ln_gdp: +0.2078 (se 0.1692) [-0.1238, +0.5395]
+  r2=0.9633
+[R drop population < 1,000,000 B_all] two-way FE: ln_gdp + all stage vars n= 3099 G=148
+  ln_gdp: +0.3687 (se 0.1453) [+0.0839, +0.6535]
+  u5_mortality: +0.0035 (se 0.0024) [-0.0012, +0.0082]
+  fem_sec_enrol: -0.0089 (se 0.0025) [-0.0139, -0.0040]
+  urban_share: -0.0215 (se 0.0077) [-0.0367, -0.0064]
+  fem_lfp: -0.0065 (se 0.0069) [-0.0201, +0.0071]
+  life_exp: -0.0142 (se 0.0176) [-0.0488, +0.0204]
+  r2=0.9710
+  -> (a) attenuation ratio = -0.1493 / -0.9941 = 0.150: consistent with H4(a) (ratio <= 0.5)
+  -> (b) within ln_gdp | stage: CI [+0.0839, +0.6535]: consistent with H4(b) (CI lower bound >= 0)
+[R drop population < 1,000,000 C-all] between, all bands pooled n= 3099 G=148
+  ln_gdp: -0.9941 (se 0.0789) [-1.1487, -0.8395]
+  r2=0.6332
+[R drop population < 1,000,000 C-U5MR 0-10] between within band n=  995 G= 58
+  ln_gdp: +0.0866 (se 0.0725) [-0.0556, +0.2288]
+  r2=0.0495
+[R drop population < 1,000,000 C-U5MR 10-25] between within band n=  712 G= 61
+  ln_gdp: -0.1116 (se 0.2057) [-0.5149, +0.2916]
+  r2=0.0947
+[R drop population < 1,000,000 C-U5MR 25-50] between within band n=  486 G= 62
+  ln_gdp: -0.2248 (se 0.2523) [-0.7194, +0.2698]
+  r2=0.0968
+[R drop population < 1,000,000 C-U5MR 50-100] between within band n=  517 G= 63
+  ln_gdp: -0.3973 (se 0.1708) [-0.7320, -0.0626]
+  r2=0.1987
+[R drop population < 1,000,000 C-U5MR >= 100] between within band n=  389 G= 43
+  ln_gdp: -0.5702 (se 0.2585) [-1.0769, -0.0636]
+  r2=0.1562
+  -> (c) not supported
+-- drop 2020-2024: n=3046 countries=170
+[R drop 2020-2024 A0] between: ln_gdp only                 n= 3046 G=170
+  ln_gdp: -0.9656 (se 0.0806) [-1.1235, -0.8076]
+  r2=0.6104
+[R drop 2020-2024 A_all] between: ln_gdp + all stage vars  n= 3046 G=170
+  ln_gdp: -0.1626 (se 0.1220) [-0.4017, +0.0766]
+  u5_mortality: +0.0135 (se 0.0027) [+0.0083, +0.0187]
+  fem_sec_enrol: -0.0181 (se 0.0042) [-0.0263, -0.0099]
+  urban_share: +0.0060 (se 0.0049) [-0.0035, +0.0155]
+  fem_lfp: -0.0047 (se 0.0044) [-0.0133, +0.0039]
+  life_exp: -0.0191 (se 0.0155) [-0.0496, +0.0113]
+  r2=0.7912
+[R drop 2020-2024 B0] two-way FE: ln_gdp only              n= 3046 G=170
+  ln_gdp: +0.0294 (se 0.1479) [-0.2606, +0.3193]
+  r2=0.9680
+[R drop 2020-2024 B_all] two-way FE: ln_gdp + all stage vars n= 3046 G=170
+  ln_gdp: +0.2128 (se 0.1239) [-0.0301, +0.4557]
+  u5_mortality: +0.0017 (se 0.0024) [-0.0030, +0.0064]
+  fem_sec_enrol: -0.0095 (se 0.0026) [-0.0145, -0.0045]
+  urban_share: -0.0181 (se 0.0081) [-0.0340, -0.0023]
+  fem_lfp: -0.0121 (se 0.0070) [-0.0258, +0.0016]
+  life_exp: -0.0221 (se 0.0179) [-0.0573, +0.0130]
+  r2=0.9741
+  -> (a) attenuation ratio = -0.1626 / -0.9656 = 0.168: consistent with H4(a) (ratio <= 0.5)
+  -> (b) within ln_gdp | stage: CI [-0.0301, +0.4557]: undetermined (CI includes 0)
+[R drop 2020-2024 C-all] between, all bands pooled         n= 3046 G=170
+  ln_gdp: -0.9656 (se 0.0806) [-1.1235, -0.8076]
+  r2=0.6104
+[R drop 2020-2024 C-U5MR 0-10] between within band         n=  845 G= 60
+  ln_gdp: +0.1117 (se 0.0731) [-0.0316, +0.2551]
+  r2=0.0587
+[R drop 2020-2024 C-U5MR 10-25] between within band        n=  810 G= 77
+  ln_gdp: -0.2611 (se 0.1741) [-0.6024, +0.0801]
+  r2=0.1734
+[R drop 2020-2024 C-U5MR 25-50] between within band        n=  502 G= 70
+  ln_gdp: -0.4508 (se 0.2580) [-0.9564, +0.0549]
+  r2=0.1520
+[R drop 2020-2024 C-U5MR 50-100] between within band       n=  504 G= 66
+  ln_gdp: -0.4278 (se 0.1698) [-0.7606, -0.0949]
+  r2=0.1924
+[R drop 2020-2024 C-U5MR >= 100] between within band       n=  385 G= 44
+  ln_gdp: -0.5090 (se 0.2397) [-0.9787, -0.0392]
+  r2=0.1293
+  -> (c) not supported
+-- 4 stage vars (no fem_sec_enrol): n=5995 countries=173
+[R 4 stage vars (no fem_sec_enrol) A0] between: ln_gdp only n= 5995 G=173
+  ln_gdp: -1.0406 (se 0.0618) [-1.1618, -0.9194]
+  r2=0.6087
+[R 4 stage vars (no fem_sec_enrol) A_all] between: ln_gdp + all stage vars n= 5995 G=173
+  ln_gdp: -0.3435 (se 0.0942) [-0.5281, -0.1589]
+  u5_mortality: +0.0168 (se 0.0024) [+0.0121, +0.0215]
+  urban_share: +0.0011 (se 0.0036) [-0.0059, +0.0082]
+  fem_lfp: -0.0083 (se 0.0039) [-0.0160, -0.0005]
+  life_exp: -0.0328 (se 0.0159) [-0.0639, -0.0017]
+  r2=0.7764
+[R 4 stage vars (no fem_sec_enrol) B0] two-way FE: ln_gdp only n= 5995 G=173
+  ln_gdp: +0.1319 (se 0.1044) [-0.0727, +0.3365]
+  r2=0.9472
+[R 4 stage vars (no fem_sec_enrol) B_all] two-way FE: ln_gdp + all stage vars n= 5995 G=173
+  ln_gdp: +0.2270 (se 0.0899) [+0.0508, +0.4031]
+  u5_mortality: +0.0073 (se 0.0020) [+0.0035, +0.0112]
+  urban_share: -0.0263 (se 0.0057) [-0.0374, -0.0152]
+  fem_lfp: -0.0047 (se 0.0050) [-0.0145, +0.0050]
+  life_exp: -0.0021 (se 0.0130) [-0.0275, +0.0233]
+  r2=0.9600
+  -> (a) attenuation ratio = -0.3435 / -1.0406 = 0.330: consistent with H4(a) (ratio <= 0.5)
+  -> (b) within ln_gdp | stage: CI [+0.0508, +0.4031]: consistent with H4(b) (CI lower bound >= 0)
+[R 4 stage vars (no fem_sec_enrol) C-all] between, all bands pooled n= 5995 G=173
+  ln_gdp: -1.0406 (se 0.0618) [-1.1618, -0.9194]
+  r2=0.6087
+[R 4 stage vars (no fem_sec_enrol) C-U5MR 0-10] between within band n= 1545 G= 69
+  ln_gdp: +0.0407 (se 0.0656) [-0.0879, +0.1693]
+  r2=0.0330
+[R 4 stage vars (no fem_sec_enrol) C-U5MR 10-25] between within band n= 1530 G= 96
+  ln_gdp: -0.2344 (se 0.1671) [-0.5619, +0.0931]
+  r2=0.0452
+[R 4 stage vars (no fem_sec_enrol) C-U5MR 25-50] between within band n= 1023 G= 89
+  ln_gdp: -0.4143 (se 0.1941) [-0.7947, -0.0338]
+  r2=0.1255
+[R 4 stage vars (no fem_sec_enrol) C-U5MR 50-100] between within band n= 1041 G= 84
+  ln_gdp: -0.3873 (se 0.1622) [-0.7051, -0.0695]
+  r2=0.1538
+[R 4 stage vars (no fem_sec_enrol) C-U5MR >= 100] between within band n=  856 G= 53
+  ln_gdp: -0.5008 (se 0.1738) [-0.8414, -0.1602]
+  r2=0.1503
+  -> (c) consistent with H4(c) (all |band| <= |overall|/2)
+
+
+== DHS: TFR by wealth quintile ==
+rows=1565 surveys=313 G=77
+surveys with all 5 quintiles=313; merged with WDI (ln_gdp at survey year)=310 (75 countries, 1990-2025)
+shape: (3, 2)
+┌─────────────┬─────┐
+│ survey_type ┆ n   │
+│ ---         ┆ --- │
+│ str         ┆ u32 │
+╞═════════════╪═════╡
+│ AIS         ┆ 5   │
+│ DHS         ┆ 264 │
+│ MIS         ┆ 41  │
+└─────────────┴─────┘
+gap < 0 in 309/310 surveys (99.7%)
+surveys with gap >= 0:
+shape: (1, 9)
+┌──────┬─────────┬─────────────┬─────────────┬───┬─────┬─────┬──────────┬──────────────┐
+│ iso3 ┆ country ┆ survey_year ┆ survey_type ┆ … ┆ q5  ┆ gap ┆ ln_gdp   ┆ national_tfr │
+│ ---  ┆ ---     ┆ ---         ┆ ---         ┆   ┆ --- ┆ --- ┆ ---      ┆ ---          │
+│ str  ┆ str     ┆ i64         ┆ str         ┆   ┆ f64 ┆ f64 ┆ f64      ┆ f64          │
+╞══════╪═════════╪═════════════╪═════════════╪═══╪═════╪═════╪══════════╪══════════════╡
+│ TCD  ┆ Chad    ┆ 2004        ┆ DHS         ┆ … ┆ 6.0 ┆ 0.9 ┆ 7.783628 ┆ 7.16         │
+└──────┴─────────┴─────────────┴─────────────┴───┴─────┴─────┴──────────┴──────────────┘
+gap / slope / ratio summary:
+shape: (9, 7)
+┌────────────┬───────────┬───────────┬──────────┬───────────┬──────────────┬──────────────┐
+│ statistic  ┆ gap       ┆ slope     ┆ ratio    ┆ ln_gdp    ┆ u5_mortality ┆ national_tfr │
+│ ---        ┆ ---       ┆ ---       ┆ ---      ┆ ---       ┆ ---          ┆ ---          │
+│ str        ┆ f64       ┆ f64       ┆ f64      ┆ f64       ┆ f64          ┆ f64          │
+╞════════════╪═══════════╪═══════════╪══════════╪═══════════╪══════════════╪══════════════╡
+│ count      ┆ 310.0     ┆ 310.0     ┆ 310.0    ┆ 310.0     ┆ 309.0        ┆ 309.0        │
+│ null_count ┆ 0.0       ┆ 0.0       ┆ 0.0      ┆ 0.0       ┆ 1.0          ┆ 1.0          │
+│ mean       ┆ -2.735484 ┆ -0.662419 ┆ 0.530638 ┆ 8.305131  ┆ 76.045631    ┆ 4.320792     │
+│ std        ┆ 1.183339  ┆ 0.298416  ┆ 0.14843  ┆ 0.756229  ┆ 45.265493    ┆ 1.431042     │
+│ min        ┆ -5.6      ┆ -1.42     ┆ 0.214286 ┆ 6.417339  ┆ 9.2          ┆ 1.3          │
+│ 25%        ┆ -3.6      ┆ -0.88     ┆ 0.424242 ┆ 7.793016  ┆ 43.1         ┆ 3.238        │
+│ 50%        ┆ -2.8      ┆ -0.67     ┆ 0.5      ┆ 8.227842  ┆ 66.0         ┆ 4.397        │
+│ 75%        ┆ -1.9      ┆ -0.45     ┆ 0.617647 ┆ 8.939306  ┆ 102.9        ┆ 5.429        │
+│ max        ┆ 0.9       ┆ 0.24      ┆ 1.176471 ┆ 10.090685 ┆ 247.2        ┆ 7.84         │
+└────────────┴───────────┴───────────┴──────────┴───────────┴──────────────┴──────────────┘
+
+== (d) main: gap = TFR(Q5) − TFR(Q1) vs ln GDP of the survey year ==
+[M D-pooled] gap ~ ln_gdp                                  n=  310 G= 75
+  ln_gdp: +0.1953 (se 0.1521) [-0.1027, +0.4933]
+  r2=0.0156
+[M D-pooled+trend] gap ~ ln_gdp + survey_year              n=  310 G= 75
+  ln_gdp: +0.1920 (se 0.1534) [-0.1086, +0.4926]
+  survey_year: +0.0253 (se 0.0098) [+0.0060, +0.0445]
+  r2=0.0493
+[M D-countryFE] gap ~ ln_gdp + C(iso3), countries with >= 2 surveys n=  297 G= 62
+  ln_gdp: +0.7281 (se 0.3605) [+0.0215, +1.4347]
+  r2=0.7299
+  -> (d) partial (one of two lower bounds > 0)
+Japan 2022 ln_gdp = 10.754052084685293; DHS ln_gdp range = 6.42-10.09
+
+== (d) other stage proxies (pre-registered): u5_mortality (expect <0), fem_sec_enrol
+-- stage=u5_mortality: n=309
+[M D-pooled] gap ~ u5_mortality                            n=  309 G= 75
+  u5_mortality: -0.0030 (se 0.0024) [-0.0076, +0.0016]
+  r2=0.0132
+[M D-pooled+trend] gap ~ u5_mortality + survey_year        n=  309 G= 75
+  u5_mortality: -0.0013 (se 0.0027) [-0.0066, +0.0041]
+  survey_year: +0.0222 (se 0.0114) [-0.0003, +0.0446]
+  r2=0.0345
+[M D-countryFE] gap ~ u5_mortality + C(iso3), countries with >= 2 surveys n=  296 G= 62
+  u5_mortality: -0.0014 (se 0.0026) [-0.0066, +0.0037]
+  r2=0.7127
+-- stage=fem_sec_enrol: n=189
+[M D-pooled] gap ~ fem_sec_enrol                           n=  189 G= 63
+  fem_sec_enrol: +0.0080 (se 0.0047) [-0.0013, +0.0172]
+  r2=0.0366
+[M D-pooled+trend] gap ~ fem_sec_enrol + survey_year       n=  189 G= 63
+  fem_sec_enrol: +0.0061 (se 0.0052) [-0.0041, +0.0164]
+  survey_year: +0.0222 (se 0.0135) [-0.0043, +0.0486]
+  r2=0.0584
+[M D-countryFE] gap ~ fem_sec_enrol + C(iso3), countries with >= 2 surveys n=  173 G= 47
+  fem_sec_enrol: +0.0169 (se 0.0057) [+0.0057, +0.0281]
+  r2=0.7551
+
+== (d) national TFR as stage proxy (descriptive only: floor effect, outcome-based) ==
+[X D-pooled] gap ~ national_tfr                            n=  309 G= 75
+  national_tfr: -0.2489 (se 0.0869) [-0.4192, -0.0786]
+  r2=0.0906
+[X D-pooled+trend] gap ~ national_tfr + survey_year        n=  309 G= 75
+  national_tfr: -0.2284 (se 0.0904) [-0.4056, -0.0513]
+  survey_year: +0.0175 (se 0.0105) [-0.0031, +0.0381]
+  r2=0.1059
+[X D-countryFE] gap ~ national_tfr + C(iso3), countries with >= 2 surveys n=  296 G= 62
+  national_tfr: -0.3228 (se 0.1160) [-0.5502, -0.0954]
+  r2=0.7362
+
+== (d) robustness (pre-registered list) ==
+-- SurveyType = DHS only: n=264 countries=75
+[R SurveyType = DHS only D-pooled] gap ~ ln_gdp            n=  264 G= 75
+  ln_gdp: +0.2079 (se 0.1514) [-0.0889, +0.5047]
+  r2=0.0174
+[R SurveyType = DHS only D-pooled+trend] gap ~ ln_gdp + survey_year n=  264 G= 75
+  ln_gdp: +0.1857 (se 0.1529) [-0.1140, +0.4854]
+  survey_year: +0.0250 (se 0.0110) [+0.0036, +0.0465]
+  r2=0.0497
+[R SurveyType = DHS only D-countryFE] gap ~ ln_gdp + C(iso3), countries with >= 2 surveys n=  250 G= 61
+  ln_gdp: +0.6988 (se 0.3758) [-0.0378, +1.4354]
+  r2=0.7569
+  -> (d) not supported
+-- latest survey per country: n=75 countries=75
+[R latest survey per country D-pooled] gap ~ ln_gdp        n=   75 G= 75
+  ln_gdp: +0.2889 (se 0.1772) [-0.0585, +0.6362]
+  r2=0.0379
+[R latest survey per country D-pooled+trend] gap ~ ln_gdp + survey_year n=   75 G= 75
+  ln_gdp: +0.2938 (se 0.2009) [-0.0999, +0.6875]
+  survey_year: +0.0017 (se 0.0252) [-0.0477, +0.0512]
+  r2=0.0381
+  -> (d) not supported
+-- outcome=slope
+[R slope D-pooled] slope ~ ln_gdp                          n=  310 G= 75
+  ln_gdp: +0.0282 (se 0.0389) [-0.0480, +0.1044]
+  r2=0.0051
+[R slope D-pooled+trend] slope ~ ln_gdp + survey_year      n=  310 G= 75
+  ln_gdp: +0.0275 (se 0.0392) [-0.0494, +0.1044]
+  survey_year: +0.0051 (se 0.0026) [+0.0000, +0.0101]
+  r2=0.0266
+[R slope D-countryFE] slope ~ ln_gdp + C(iso3), countries with >= 2 surveys n=  297 G= 62
+  ln_gdp: +0.1244 (se 0.0950) [-0.0619, +0.3106]
+  r2=0.7385
+-- outcome=ratio
+[R ratio D-pooled] ratio ~ ln_gdp                          n=  310 G= 75
+  ln_gdp: -0.0420 (se 0.0207) [-0.0826, -0.0014]
+  r2=0.0458
+[R ratio D-pooled+trend] ratio ~ ln_gdp + survey_year      n=  310 G= 75
+  ln_gdp: -0.0423 (se 0.0207) [-0.0827, -0.0018]
+  survey_year: +0.0021 (se 0.0011) [-0.0002, +0.0043]
+  r2=0.0599
+[R ratio D-countryFE] ratio ~ ln_gdp + C(iso3), countries with >= 2 surveys n=  297 G= 62
+  ln_gdp: +0.0184 (se 0.0431) [-0.0661, +0.1029]
+  r2=0.7764
+-- population-weighted WLS (weight = WDI population at survey year)
+[R wls D-pooled] gap ~ ln_gdp                              n=  310 G= 75
+  ln_gdp: +0.6500 (se 0.1850) [+0.2873, +1.0127]
+  r2=0.1390
+[R wls D-countryFE] gap ~ ln_gdp + C(iso3)                 n=  297 G= 62
+  ln_gdp: +1.0924 (se 0.3406) [+0.4248, +1.7601]
+  r2=0.8000

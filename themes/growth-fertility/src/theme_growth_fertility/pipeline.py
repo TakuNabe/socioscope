@@ -3,6 +3,7 @@
 Two sources: World Bank WDI (cross-country panel, H1/H2) and e-Stat 国民生活基礎調査
 (Japan, income class × marriage / children, H3). Each source stages independently; the
 marts are ``growth_fertility_panel`` (WB) and ``jp_income_class_fertility`` (e-Stat).
+Third source (H4): DHS Program API, TFR by wealth quintile -> ``dhs_tfr_by_wealth_quintile``.
 """
 
 from collections import defaultdict
@@ -10,7 +11,7 @@ from collections.abc import Callable, Sequence
 
 from socioscope_core.core.pipeline import Context, Stage, StageResult
 from socioscope_core.ports.fetcher import FetchError
-from theme_growth_fertility import estat
+from theme_growth_fertility import dhs, estat
 from theme_growth_fertility import worldbank as wb
 
 THEME = "growth-fertility"
@@ -30,6 +31,12 @@ _ESTAT_PARSERS: dict[estat.TableKind, Callable[[bytes, estat.Table], list[dict[s
 }
 JP_MART = "marts/jp_income_class_fertility"
 JP_AGE_MART = "marts/jp_income_age_marital"
+# DHS: raw name -> URL (both files are needed at stage; countries give the ISO3 mapping)
+DHS_RAW_DATA = "dhs_tfr_wealth.json"
+DHS_RAW_COUNTRIES = "dhs_countries.json"
+DHS_URLS: dict[str, str] = {DHS_RAW_DATA: dhs.data_url(), DHS_RAW_COUNTRIES: dhs.countries_url()}
+DHS_TABLE = "staged/dhs/tfr_by_wealth_quintile"
+DHS_MART = "marts/dhs_tfr_by_wealth_quintile"
 
 
 def _sources() -> dict[str, str]:
@@ -79,6 +86,21 @@ def fetch(ctx: Context) -> StageResult:
             name=table.raw_name,
             url=url,
             license=estat.LICENSE,
+            payload=payload,
+        )
+        written.append(rec.relative_path)
+    for name, url in DHS_URLS.items():
+        try:
+            payload = ctx.fetcher.fetch(url)
+        except FetchError as e:
+            skipped.append(f"{name}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME,
+            source=dhs.SOURCE,
+            name=name,
+            url=url,
+            license=dhs.LICENSE,
             payload=payload,
         )
         written.append(rec.relative_path)
@@ -133,13 +155,34 @@ def _stage_estat(ctx: Context) -> tuple[list[str], list[str]]:
     return written, skipped
 
 
+def _stage_dhs(ctx: Context) -> tuple[list[str], list[str]]:
+    """TFR by wealth quintile with ISO3 from the DHS countries file (fail closed without it)."""
+    written: list[str] = []
+    skipped: list[str] = []
+    data = ctx.raw.get(theme=THEME, source=dhs.SOURCE, name=DHS_RAW_DATA)
+    countries = ctx.raw.get(theme=THEME, source=dhs.SOURCE, name=DHS_RAW_COUNTRIES)
+    if data is None or countries is None:
+        for name, payload in ((DHS_RAW_DATA, data), (DHS_RAW_COUNTRIES, countries)):
+            if payload is None:
+                skipped.append(f"{name}: raw missing (run fetch); DHS not staged")
+        return written, skipped
+    iso3_by_code = dhs.iso3_map(countries)
+    ctx.tables.write_table(DHS_TABLE, dhs.rows_from_response(data, iso3_by_dhs_code=iso3_by_code))
+    written.append(DHS_TABLE)
+    unmapped = dhs.unmapped_codes(data, iso3_by_dhs_code=iso3_by_code)
+    if unmapped:
+        skipped.append(f"{DHS_RAW_DATA}: no ISO3 for DHS country codes {unmapped}; rows dropped")
+    return written, skipped
+
+
 def stage(ctx: Context) -> StageResult:
     wb_written, wb_skipped = _stage_worldbank(ctx)
     es_written, es_skipped = _stage_estat(ctx)
+    dhs_written, dhs_skipped = _stage_dhs(ctx)
     return StageResult(
         stage=Stage.STAGE,
-        written=tuple(wb_written + es_written),
-        skipped=tuple(wb_skipped + es_skipped),
+        written=tuple(wb_written + es_written + dhs_written),
+        skipped=tuple(wb_skipped + es_skipped + dhs_skipped),
     )
 
 
@@ -328,6 +371,14 @@ def build_income_age_marital(rows: Sequence[dict[str, object]]) -> list[dict[str
     return out
 
 
+def build_dhs_mart(rows: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    """Mart = staged rows as-is, sorted by survey_year, iso3, quintile. Pure."""
+    return sorted(
+        (dict(r) for r in rows),
+        key=lambda r: (int(str(r["survey_year"])), str(r["iso3"]), int(str(r["quintile"]))),
+    )
+
+
 def mart(ctx: Context) -> StageResult:
     written: list[str] = []
     skipped: list[str] = []
@@ -372,4 +423,12 @@ def mart(ctx: Context) -> StageResult:
     if shugyo is not None:
         ctx.tables.write_table(JP_AGE_MART, build_income_age_marital(shugyo))
         written.append(JP_AGE_MART)
+
+    try:
+        dhs_rows = ctx.tables.read_table(DHS_TABLE)
+    except FileNotFoundError:
+        skipped.append(f"{DHS_TABLE}: staged table missing (run stage)")
+    else:
+        ctx.tables.write_table(DHS_MART, build_dhs_mart(dhs_rows))
+        written.append(DHS_MART)
     return StageResult(stage=Stage.MART, written=tuple(written), skipped=tuple(skipped))

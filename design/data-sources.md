@@ -19,6 +19,7 @@
 | Our World in Data | 整形済み系列（出典明記） | CSV / grapher API | CC BY | 候補（検証用） |
 | e-Stat（政府統計の総合窓口） | 国民生活基礎調査 所得票（所得階級×配偶者の有無・児童のいる世帯） | 統計表ファイル直接ダウンロード（`stat-search/file-download?statInfId=…&fileKind=1`、appId 不要） | **政府標準利用規約（第2.0版）＝CC BY 4.0 互換**（確認 2026-10-04） | **採用**（growth-fertility H3） |
 | e-Stat — 就業構造基本調査（総務省） | 令和4年 全国編 第40表: 男女×配偶関係×年齢×所得（有業者） | 統計表ファイル直接ダウンロード（`…&fileKind=0`、**Excel のみ**、appId 不要。標準ライブラリで解析） | 同上（確認 2026-10-04） | **採用**（growth-fertility H3b 年齢調整） |
+| DHS Program Indicator Data API | 調査前 3 年の TFR（15–49 歳）× 富裕五分位（`FE_FRTR_W_TFR` × Wealth quintile）、約 90 か国 1990–2025 の DHS/MIS/AIS 調査；国コード表（ISO3） | REST JSON（`api.dhsprogram.com/rest/dhs/data`, `/countries`、API キー不要） | **引用義務**（Terms: 「The DHS Program Indicator Data API, The Demographic and Health Surveys (DHS) Program. ICF. Originally funded by USAID. Available from api.dhsprogram.com. [Accessed 10-05-2026]」。確認 2026-10-05） | **採用**（growth-fertility H4） |
 | 国立社会保障・人口問題研究所 | 出生動向基本調査、将来推計人口 | CSV/Excel | 要確認 | 候補（日本） |
 | 国税庁 統計年報 / 民間給与実態統計 | 所得分布 | Excel | 政府標準利用規約 | 候補（日本） |
 | 野村総研 富裕層レポート等 | 資産階層別世帯数（推計） | PDF（公開レポート） | 引用のみ | 候補（LLM 構造化対象） |
@@ -110,6 +111,19 @@
   - `tax_revenue_gdp` / `inheritance_tax_rev_gdp` は 1980 年時点で 26 か国。遅れて始まる国: CHL/COL/CRI 1990, HUN/POL 1991, CZE 1993, EST/ISR/LTU/LVA/SVK/SVN 1995。
   - `OBS_VALUE` 空（`OBS_STATUS` M/L 等）は行ごと落とす（補完しない）。staged に `obs_status` 列を残す。
   - 最高税率は賃金所得に対する法定税率で、資本所得・配当の税率ではない。社会支出・税収は GDP 比で、GDP 改定の影響を受ける。
+
+### DHS Program Indicator Data API（growth-fertility H4: 国内の富裕五分位別 TFR）
+- URL / API:
+  - データ: `https://api.dhsprogram.com/rest/dhs/data?indicatorIds=FE_FRTR_W_TFR&breakdown=all&characteristicCategory=Wealth%20quintile&perpage=5000&f=json`（1 ページ、2026-10-05 時点 1,565 レコード = 313 調査 × 5 五分位）。レスポンスは JSON オブジェクト `{TotalPages, RecordCount, RecordsReturned, Page, Data[]}`。`Data` の主フィールド: `Value`(数値), `DHS_CountryCode`, `CountryName`, `SurveyYear`(int), `SurveyId`(例 `AF2015DHS`), `IndicatorId`, `CharacteristicCategory`, `CharacteristicLabel`(Lowest/Second/Middle/Fourth/Highest), `SurveyType`(DHS/MIS/AIS), `CILow`/`CIHigh`/`DenominatorWeighted`(**文字列**、この指標では空)。
+  - 国コード: `https://api.dhsprogram.com/rest/dhs/countries?f=json&perpage=300`（92 件。`DHS_CountryCode` → `ISO3_CountryCode`。`OS`＝Nigeria (Ondo State) は ISO3 空）。
+  - API キー不要。`TotalPages != 1` や `RecordCount != len(Data)` は `ValueError`（fail-closed）。
+- 対象指標・粒度: 調査（国 × 調査年 × 調査種別）× 富裕五分位 1..5。富裕五分位は**資産指数による国内の相対順位**で所得額ではない。TFR は調査前 3 年の 15–49 歳女性ベース。
+- ライセンス・利用規約（確認日 2026-10-05、`https://api.dhsprogram.com/#/terms.cfm`）: 利用は自由だが**引用必須**: 「The DHS Program Indicator Data API, The Demographic and Health Surveys (DHS) Program. ICF. Originally funded by the United States Agency for International Development (USAID). Available from api.dhsprogram.com. [Accessed 10-05-2026]」。`theme_growth_fertility.dhs.LICENSE` に記載し manifest に残す。raw はコミットしない。
+- 取得方法（adapter 名、レート制限）: `theme_growth_fertility.dhs`（URL 組み立て・`iso3_map`・`rows_from_response`・`unmapped_codes` の純粋変換、Pydantic `extra="ignore"`）＋ `pipeline.fetch` / `pipeline._stage_dhs`（`HttpxFetcher`）。**2 リクエスト**。raw は `data/raw/growth-fertility/dhs_api/{dhs_tfr_wealth,dhs_countries}.json`、staged は `staged/dhs/tfr_by_wealth_quintile`（countries raw が無ければ fail-closed）、mart は `marts/dhs_tfr_by_wealth_quintile`（staged をそのまま `survey_year, iso3, quintile` でソート）。公開レート制限なし。
+- 既知の欠損・断絶・定義変更:
+  - ISO3 の付かない DHS 国コード（サブナショナル調査 `OS` 等）の行は落とし、stage の skipped に残す。
+  - `CILow`/`CIHigh`/`DenominatorWeighted` はこの指標では全件空（None）。列は保持する。
+  - 対象国は低・中所得国に偏る（高所得国の国内勾配は観測できない）。同一国の複数調査は調査種別（DHS/MIS/AIS）が混在する。
 
 ## 記録テンプレート（ソース採用時）
 ```

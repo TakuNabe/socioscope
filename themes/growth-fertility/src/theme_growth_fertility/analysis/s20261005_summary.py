@@ -1,7 +1,7 @@
 """総括レポート（note.com 向け、日本語・一般読者）用の図を生成する決定的スクリプト。
 
-H1〜H3b の 4 レポートの数値を、同じ mart から**再計算**して 13 枚の図にする（新しい推定は行わない。
-既存スクリプト a20261004_h1 / h2 / h3 / h3b の純粋関数・推定関数を import して同じ仕様で再計算し、
+H1〜H4 の 5 レポートの数値を、同じ mart から**再計算**して 15 枚の図にする（新しい推定は行わない。
+既存スクリプト a20261004_h1 / h2 / h3 / h3b / a20261005_h4 の関数を import して同じ仕様で再計算し、
 標準出力に数値を出す。乱数は使わない）。
 
     uv run python themes/growth-fertility/src/theme_growth_fertility/analysis/s20261005_summary.py \
@@ -10,7 +10,7 @@ H1〜H3b の 4 レポートの数値を、同じ mart から**再計算**して 
 図は日本語フォント（Hiragino Sans → Hiragino Maru Gothic Pro → Noto Sans CJK JP → IPAexGothic →
 Yu Gothic の順に検出。無ければ DejaVu Sans で警告）、150 dpi、PNG メタデータの Software を落として
 バイト単位で再現可能にする。純粋なデータ準備ヘルパ（choose_font, year_slice, country_trails,
-tfr_in_year, japan_series, dollar_ticks, wave_curves, sign_word, ladder_items）は
+tfr_in_year, japan_series, dollar_ticks, wave_curves, sign_word, ladder_items, band_profiles）は
 tests/test_summary.py で検証する。
 """
 
@@ -31,12 +31,14 @@ from theme_growth_fertility.analysis import a20261004_h1_income_tfr as h1
 from theme_growth_fertility.analysis import a20261004_h2_growth_shocks as h2
 from theme_growth_fertility.analysis import a20261004_h3_jp_income_class as h3
 from theme_growth_fertility.analysis import a20261004_h3b_age_adjusted as h3b
+from theme_growth_fertility.analysis import a20261005_h4_stage_vs_gdp as h4
 
 THEME_DIR = Path(__file__).resolve().parents[3]
 REPO_ROOT = THEME_DIR.parents[1]
 PANEL = Path("marts") / "growth_fertility_panel.parquet"
 JP_MART = Path("marts") / "jp_income_class_fertility.parquet"
 AGE_MART = Path("marts") / "jp_income_age_marital.parquet"
+DHS_MART = Path("marts") / "dhs_tfr_by_wealth_quintile.parquet"
 
 PREFERRED_FONTS = (
     "Hiragino Sans",
@@ -55,6 +57,14 @@ SRC_ESTAT_SHUGYO = (
     "出典: 政府統計の総合窓口(e-Stat) 就業構造基本調査（総務省）を加工　分析: socioscope"
 )
 SRC_BOTH = "出典: World Bank WDI (CC BY 4.0) / e-Stat 国民生活基礎調査を加工　分析: socioscope"
+SRC_DHS = "出典: The DHS Program Indicator Data API (ICF) / World Bank WDI　分析: socioscope"
+BAND_NAMES_JA = {
+    "U5MR 0-10": "5歳未満死亡率 10 未満",
+    "U5MR 10-25": "10〜25",
+    "U5MR 25-50": "25〜50",
+    "U5MR 50-100": "50〜100",
+    "U5MR >= 100": "100 以上（出生千対）",
+}
 
 # palette (shared with H1–H3b): blue ramp for ordered series, orange for Japan / emphasis
 BLUE_RAMP = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"]
@@ -214,6 +224,25 @@ def ladder_items() -> list[LadderItem]:
 
 
 # ---------------------------------------------------------------- plotting setup
+def band_profiles(dhs: pl.DataFrame, merged: pl.DataFrame) -> pl.DataFrame:
+    """Mean TFR per wealth quintile, surveys grouped by the country's U5MR band at survey year.
+
+    Columns: u5_band_order, u5_band, quintile, tfr, surveys. Surveys outside the bands (U5MR
+    missing) are dropped. Pure; deterministic order.
+    """
+    banded = (
+        h4.u5_band(merged)
+        .filter(pl.col("u5_band").is_not_null())
+        .select("survey_id", "u5_band", "u5_band_order")
+    )
+    return (
+        dhs.join(banded, on="survey_id", how="inner")
+        .group_by(["u5_band_order", "u5_band", "quintile"])
+        .agg(pl.col("value").mean().alias("tfr"), pl.col("survey_id").n_unique().alias("surveys"))
+        .sort(["u5_band_order", "quintile"])
+    )
+
+
 def setup_matplotlib() -> str:
     import matplotlib
 
@@ -925,6 +954,95 @@ def fig13_japan_timeline(jp: pl.DataFrame, path: Path) -> None:
 
 
 # ---------------------------------------------------------------- run
+def fig14_stage_controls(res: dict[str, h1.Est], path: Path) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(9, 4.4))
+    rows = []
+    for key, label, color in (
+        ("A0", "国の間: 所得だけ", BLUE),
+        (
+            "A_all",
+            "国の間: 人口転換の段階をそろえる\n（死亡率・女子教育・都市化・女性就業・寿命）",
+            BLUE,
+        ),
+        ("B0", "国の中: 所得だけ", ORANGE),
+        ("B_all", "国の中: 段階をそろえる", ORANGE),
+    ):
+        b, _, lo, hi = res[key].coefs["ln_gdp"]
+        rows.append((label, b, lo, hi, color))
+    _ci_dots(ax, rows)
+    ax.set_ylim(-0.6, 3.6)
+    ax.set_xlabel("一人当たり GDP が 2.7 倍（対数で 1）違うと TFR は何人違うか（95% 信頼区間つき）")
+    n, g = res["A0"].n, res["A0"].countries
+    ax.set_title(
+        "人口転換の段階をそろえると、国の間の「豊かさ → 少子化」は 5 分の 1 に縮み、\n"
+        "国の中では所得の向きが正になる"
+        f"（同じサンプル n={n:,}、{g} か国、1990–2024 年）",
+        fontsize=10.5,
+        loc="left",
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    _save(fig, path, SRC_WB)
+
+
+def fig15_dhs_quintiles(
+    prof: pl.DataFrame, merged: pl.DataFrame, pooled: h1.Est, japan_ln_gdp: float, path: Path
+) -> None:
+    plt = _plt()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.6))
+    for i in sorted(prof["u5_band_order"].unique().to_list()):
+        sub = prof.filter(pl.col("u5_band_order") == i)
+        ax1.plot(
+            sub["quintile"],
+            sub["tfr"],
+            marker="o",
+            color=BLUE_RAMP[int(i)],
+            linewidth=2,
+            label=f"{BAND_NAMES_JA[str(sub['u5_band'][0])]}（{int(sub['surveys'][0])} 調査）",
+        )
+    ax1.set_xticks([1, 2, 3, 4, 5])
+    ax1.set_xticklabels(["最貧 20%", "2", "3", "4", "最富裕 20%"])
+    ax1.set_ylabel("TFR（五分位ごとの平均）")
+    ax1.set_title("途上国の中では、豊かな層ほど子どもが少ない", fontsize=10.5, loc="left")
+    ax1.legend(frameon=False, fontsize=8, title="国の人口転換の段階", title_fontsize=8)
+    _style(ax1)
+    x, y = merged["ln_gdp"].to_numpy(), merged["gap"].to_numpy()
+    ax2.scatter(x, y, s=14, alpha=0.55, color=BLUE, edgecolors="none")
+    b, _, lo, hi = pooled.coefs["ln_gdp"]
+    xs = np.linspace(float(x.min()), float(x.max()), 20)
+    ax2.plot(xs, float(y.mean()) + b * (xs - float(x.mean())), color=ORANGE, linewidth=2)
+    ax2.axhline(0, color=MUTED, linewidth=0.8)
+    ax2.axvline(japan_ln_gdp, color=GREEN, linewidth=1.2, linestyle=":")
+    ax2.annotate(
+        "日本 2022 の豊かさ\n（DHS に無い。H3 の指標は別物）",
+        (japan_ln_gdp, float(y.max())),
+        fontsize=8,
+        color=GREEN,
+        ha="right",
+        va="top",
+        xytext=(-4, 0),
+        textcoords="offset points",
+    )
+    _log_x(ax2, float(x.min()), japan_ln_gdp + 0.3, sparse=True)
+    ax2.set_xlabel("調査年の一人当たり GDP（購買力平価、対数軸）")
+    ax2.set_ylabel("最富裕 20% の TFR − 最貧 20% の TFR")
+    ax2.set_title(
+        f"差の深さは国の豊かさとほぼ無関係（傾き {b:+.2f} [{lo:+.2f}, {hi:+.2f}]）",
+        fontsize=10.5,
+        loc="left",
+    )
+    _style(ax2)
+    fig.suptitle(
+        f"DHS 調査 {merged.height} 件・{merged['iso3'].n_unique()} か国"
+        f"（{h4._span(merged['survey_year'])} 年）の富裕五分位別 TFR",
+        fontsize=10.5,
+        x=0.01,
+        ha="left",
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 0.95))
+    _save(fig, path, SRC_DHS)
+
+
 def run(data_dir: Path, fig_dir: Path) -> None:
     font = setup_matplotlib()
     print(f"font={font}")
@@ -1073,6 +1191,28 @@ def run(data_dir: Path, fig_dir: Path) -> None:
     fig11_age_adjusted(men, by_age, crude, std, fe, fig_dir / "s11_age_adjusted.png")
 
     fig12_evidence_ladder(fig_dir / "s12_evidence_ladder.png")
+
+    # H4 recomputed: stage controls (a)(b) and DHS wealth-quintile gradient (d)
+    dhs = pl.read_parquet(data_dir / DHS_MART)
+    h4_frame = h4.stage_frame(panel)
+    print(f"== H4 sample: n={h4_frame.height} countries={h4_frame['iso3'].n_unique()} ==")
+    res = h4.block_a_b(h4_frame, h4.STAGE_VARS, "S")
+    for key in ("A0", "A_all", "B0", "B_all"):
+        print(res[key].line())
+    fig14_stage_controls(res, fig_dir / "s14_stage_controls.png")
+    merged = h4.merge_stage(h4.quintile_gradients(dhs), panel)
+    neg = merged.filter(pl.col("gap") < 0).height
+    print(
+        f"== H4 DHS: surveys={merged.height} countries={merged['iso3'].n_unique()} gap<0: {neg} =="
+    )
+    pooled = h1.fit(merged, "gap ~ ln_gdp", label="[D-pooled] gap ~ ln_gdp", fe=False)
+    print(pooled.line())
+    prof = band_profiles(dhs, merged)
+    print(prof)
+    jpn = panel.filter((pl.col("iso3") == "JPN") & (pl.col("year") == 2022))
+    japan_ln_gdp = math.log(float(jpn["gdp_pcap_ppp"][0]))
+    print(f"  Japan 2022 ln_gdp={japan_ln_gdp:.3f}")
+    fig15_dhs_quintiles(prof, merged, pooled, japan_ln_gdp, fig_dir / "s15_dhs_quintiles.png")
 
 
 def main() -> None:

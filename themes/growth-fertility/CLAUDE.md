@@ -6,7 +6,8 @@
 src/theme_growth_fertility/
   worldbank.py   World Bank WDI API の URL 組み立てと JSON → 行 の純粋変換（決定的・テスト対象）
   estat.py       e-Stat 統計表（appId 不要）の URL 組み立てと ファイル → 行 の純粋変換（fail-closed）: 国民生活基礎調査 CSV（CP932）と 就業構造基本調査 第40表 xlsx（標準ライブラリで解析）
-  pipeline.py    fetch / stage / mart（Port 経由。I/O はここだけ。WB と e-Stat は独立に stage される）
+  dhs.py         DHS Program Indicator Data API（キー不要・引用義務）の URL 組み立てと JSON → 行 の純粋変換（TFR × 富裕五分位、ISO3 付け、fail-closed）
+  pipeline.py    fetch / stage / mart（Port 経由。I/O はここだけ。WB・e-Stat・DHS は独立に stage される）
   wiring.py      PIPELINE（entry point）。stage 関数の登録のみ
   analysis/      report 用スクリプト（決定的、seed 固定）
 queries/         DuckDB 用 SQL（? バインド）
@@ -22,7 +23,14 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | `staged/worldbank/gdp_pcap_ppp` | 〃 | 〃 |
 | `staged/worldbank/gdp_growth` | 〃 | 〃 |
 | `staged/worldbank/population` | 〃 | 〃（`SP.POP.TOTL`。サンプル絞り込み用） |
-| `marts/growth_fertility_panel` | iso3×year | iso3, country, year, region, income_group, tfr, gdp_pcap_ppp, gdp_growth, population（217 経済 × 1960–2025 = 14,322 行） |
+| `staged/worldbank/u5_mortality` | 〃 | 〃（`SH.DYN.MORT`、H4 段階指標） |
+| `staged/worldbank/fem_sec_enrol` | 〃 | 〃（`SE.SEC.ENRR.FE`、H4） |
+| `staged/worldbank/urban_share` | 〃 | 〃（`SP.URB.TOTL.IN.ZS`、H4） |
+| `staged/worldbank/fem_lfp` | 〃 | 〃（`SL.TLF.CACT.FE.ZS`、H4。ILO 推計、1990 年以降） |
+| `staged/worldbank/life_exp` | 〃 | 〃（`SP.DYN.LE00.IN`、H4） |
+| `marts/growth_fertility_panel` | iso3×year | iso3, country, year, region, income_group, tfr, gdp_pcap_ppp, gdp_growth, population, u5_mortality, fem_sec_enrol, urban_share, fem_lfp, life_exp（217 経済 × 1960–2025 = 14,322 行） |
+| `staged/dhs/tfr_by_wealth_quintile` | 調査×五分位 | iso3, country, dhs_country_code, survey_id, survey_year, survey_type(DHS/MIS/AIS), quintile(1..5), quintile_label, value, ci_low, ci_high, denominator_weighted, source(`dhs_api`)（ISO3 の付かない国コードの行は除外） |
+| `marts/dhs_tfr_by_wealth_quintile` | 〃 | staged と同列。`survey_year, iso3, quintile` でソート（313 調査 × 5 = 1,565 行、2026-10-05 取得） |
 | `staged/estat/kiso_income_dist_ts` | population×year×所得階級 | population(all/with_children), survey_year, year（所得年）, income_class, income_class_lower_yen, income_class_upper_yen, share_pct, source, stat_inf_id（1985–2024 × 25 階級 × 2 = 2,000 行） |
 | `staged/estat/kiso_workers_marital_income` | 調査波×配偶者の有無×性×所得階級 | survey_year, year, marital(total/married/unmarried), sex(total/male/female), income_class…, workers_per_100k, source, stat_inf_id（5 波 × 9 × 18 = 810 行） |
 | `staged/estat/kiso_hh_type_income` | 調査波×所得階級 | survey_year, year, income_class…, households_per_10k, with_children_per_10k, single_mother_per_10k, source, stat_inf_id（5 波 × 26 = 130 行） |
@@ -37,7 +45,8 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | `analysis/a20261004_h2_growth_shocks.py` | `reports/2026-10-04-h2-growth-shocks.md`（＋ `.stdout.txt`、`figures/h2_*.png`） | H2: 成長率 × TFR。(a) 同一サンプルの二元 FE で ln GDP pc と成長率ラグ 0–3 の標準化係数・within-R² を比較、(b) ΔTFR の分布ラグ（国 FE）と累積反応、(c) 景気後退（成長率 < −2 %、5 年間隔）のイベントスタディ（−3..+5、端点ビン、国＋年 FE）、(d) 事前リストの異質性・頑健性、2008–09/2020 の記述図。H1 の `OIL_STATES`/`SMALL_POP`/`Est`/`_style` を import。識別戦略なし（関連のみ） |
 | `analysis/a20261004_h3_jp_income_class.py` | `reports/2026-10-04-h3-jp-income-class.md`（＋ `.stdout.txt`、`figures/h3_*.png`） | H3: 日本の所得階級 × 男性有配偶率・児童世帯割合の勾配（階級単位の加重 OLS・Spearman・波間交互作用）と、国間 ln GDP pc × TFR 勾配との符号比較（レベル間比較、記述のみ） |
 | `analysis/a20261004_h3b_age_adjusted.py` | `reports/2026-10-04-h3b-age-adjusted.md`（＋ `.stdout.txt`、`figures/h3b_*.png`） | H3b（H3 の事前に定めた精緻化）: 就業構造基本調査 2022 第40表で男性既婚経験率の所得勾配を年齢調整（年齢階級内勾配・直接法標準化・年齢 FE 付き加重 OLS）し、未調整勾配・H3 の勾配と比較（減衰率）。H3 のヘルパ（`band_midpoint`, `wls`, `band_frame` 等）を import して再利用 |
-| `analysis/s20261005_summary.py` | `reports/2026-10-05-summary-growth-fertility.md`（＋ `.stdout.txt`、`figures/summary/s01_*.png`〜`s13_*.png`） | 総括（note.com 向け、日本語・一般読者）: H1〜H3b の結論を同じ mart から**再計算**して 13 枚の図にする（新しい推定なし。H1/H2/H3/H3b の推定関数を import）。図の文字は日本語（フォントは Hiragino Sans → … → Yu Gothic を検出、無ければ DejaVu で警告。下記規約の例外）。PNG は `metadata={"Software": None}` でバイト再現。純粋ヘルパは `tests/test_summary.py` |
+| `analysis/a20261005_h4_stage_vs_gdp.py` | `reports/2026-10-05-h4-stage-vs-gdp.md`（＋ `.stdout.txt`、`figures/h4_*.png`） | H4: 国間の負の所得勾配は人口転換の段階による見かけか。(a) 同一サンプルで段階指標 5 本（u5_mortality, fem_sec_enrol, urban_share, fem_lfp, life_exp）を加えた国間 ln GDP 係数の減衰比、(b) 二元 FE＋段階指標の ln GDP 係数、(c) 5 歳未満死亡率の層内勾配 vs 全体、(d) DHS 富裕五分位 TFR の gap = Q5 − Q1 を調査年の ln GDP に回帰（pooled／国 FE／人口加重 WLS）、(e) 日本は図示のみ。H1 の `build_regression_frame`/`fit`/`OIL_STATES`/`SMALL_POP` を import。判定基準は事前固定。識別戦略なし |
+| `analysis/s20261005_summary.py` | `reports/2026-10-05-summary-growth-fertility.md`（＋ `.stdout.txt`、`figures/summary/s01_*.png`〜`s15_*.png`） | 総括（note.com 向け、日本語・一般読者）: H1〜H4 の結論を同じ mart から**再計算**して 15 枚の図にする（新しい推定なし。H1/H2/H3/H3b/H4 の推定関数を import。s14 = 段階指標をそろえた国間／国内係数、s15 = DHS 五分位プロファイルと gap 散布）。図の文字は日本語（フォントは Hiragino Sans → … → Yu Gothic を検出、無ければ DejaVu で警告。下記規約の例外）。PNG は `metadata={"Software": None}` でバイト再現。純粋ヘルパは `tests/test_summary.py` |
 
 ## 規約
 - World Bank の集計地域（World, North America=`NAC`, 所得グループ等）は indicator エンドポイントで `iso3` が 3 文字のまま返ることがある。fetch で `/v2/country` メタデータ（`countries.json`）も取得し、stage 段階で `region.id == "NA"` の経済を除外する（`worldbank.country_set` → `rows_from_response(countries=...)`）。`countries.json` が無いと stage は何も書かない（fail-closed）。
@@ -48,4 +57,5 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 - 就業構造基本調査（`estat_shugyo`）の `year` は**調査年**（所得は調査前 1 年、2021-10〜2022-09）。配偶関係は「総数」「うち未婚」のみなので mart の metric は `ever_married_share`（既婚経験率）であり、`married_share`（配偶者あり率）と混同しない。所得ラベル「50〜99万円」の上限は 100 万円に正規化する。
 - `marts/jp_income_age_marital` は `staged/estat/shugyo_marital_age_income` があるときだけ書かれる（kiso の mart とは独立）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、就業構造基本調査（総務省）を加工」。
 - `marts/jp_income_class_fertility` は WB mart と独立に書かれる（staged/estat が無ければ skip）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、国民生活基礎調査（厚生労働省）を加工」。
+- DHS（`dhs.py`）: raw は `dhs_tfr_wealth.json` と `dhs_countries.json` の 2 件。stage は両方揃うときだけ `staged/dhs/tfr_by_wealth_quintile` を書く（countries が無いと fail-closed）。ISO3 は `/rest/dhs/countries` の `ISO3_CountryCode` で付け、付かない国コード（`OS`＝Nigeria (Ondo State) 等）は行を落として skipped に残す。`CharacteristicCategory != "Wealth quintile"`・未知ラベル・他指標の行は落とす。`TotalPages != 1` / `RecordCount != len(Data)` は `ValueError`。富裕五分位は**資産ベースの国内相対順位**（所得額ではない）。出典表記（引用義務）: `dhs.LICENSE` の文言をレポートに載せる。mart は WB・e-Stat と独立。
 - 分析スクリプトは `reports/figures/` に図を保存し、標準出力を `reports/<date>-<slug>.stdout.txt` に残す（report の数値の出所）。図の文字は matplotlib 同梱フォントで描ける英語にする（日本語フォントに依存させない）。例外は一般読者向けの総括（`s20261005_summary.py`、`figures/summary/`）のみ: 日本語フォントを `matplotlib.font_manager` で検出し、無い環境では DejaVu にフォールバックして stderr に警告する（PNG の sha256 はフォント環境に依存する）。

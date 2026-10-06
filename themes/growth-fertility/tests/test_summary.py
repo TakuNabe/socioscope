@@ -117,3 +117,28 @@ def test_ladder_items_are_fixed_and_three_rungs() -> None:
     assert all(0 <= i.rung <= 2 for i in items)
     with pytest.raises(ValueError, match="rung"):
         s.LadderItem("x", "y", 3)
+
+
+def test_band_profiles_groups_surveys_by_u5mr_band_and_orders_quintiles() -> None:
+    dhs = pl.DataFrame(
+        {
+            "survey_id": ["A"] * 5 + ["B"] * 5 + ["C"] * 5,
+            "quintile": [1, 2, 3, 4, 5] * 3,
+            "value": [6.0, 5.5, 5.0, 4.5, 4.0] + [4.0, 3.5, 3.0, 2.5, 2.0] + [3.0] * 5,
+        }
+    )
+    merged = pl.DataFrame({"survey_id": ["A", "B", "C"], "u5_mortality": [150.0, 60.0, None]})
+    prof = s.band_profiles(dhs, merged)
+    assert (
+        prof["survey_id" if "survey_id" in prof.columns else "u5_band"].to_list()[:5]
+        == ["U5MR 50-100"] * 5
+    )
+    assert prof.filter(pl.col("u5_band") == "U5MR >= 100")["tfr"].to_list() == [
+        6.0,
+        5.5,
+        5.0,
+        4.5,
+        4.0,
+    ]
+    assert prof["surveys"].unique().to_list() == [1]
+    assert prof.height == 10  # survey C (no U5MR) is dropped

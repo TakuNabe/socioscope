@@ -1,0 +1,64 @@
+{
+ "TotalPages": 1,
+ "RecordsReturned": 4,
+ "Page": "1",
+ "RecordCount": 4,
+ "Data": [
+  {
+   "DHS_CountryCode": "AF",
+   "CountryName": "Afghanistan",
+   "FIPS_CountryCode": "AF",
+   "ISO2_CountryCode": "AF",
+   "ISO3_CountryCode": "AFG",
+   "UNAIDS_CountryCode": "AFG",
+   "UNICEF_CountryCode": "AFG",
+   "UNSTAT_CountryCode": "AFG",
+   "WHO_CountryCode": "AF",
+   "RegionName": "South & Southeast Asia",
+   "SubregionName": "South Asia",
+   "RegionOrder": 41
+  },
+  {
+   "DHS_CountryCode": "AL",
+   "CountryName": "Albania",
+   "FIPS_CountryCode": "AL",
+   "ISO2_CountryCode": "AL",
+   "ISO3_CountryCode": "ALB",
+   "UNAIDS_CountryCode": "ALB",
+   "UNICEF_CountryCode": "ALB",
+   "UNSTAT_CountryCode": "ALB",
+   "WHO_CountryCode": "AL",
+   "RegionName": "North Africa/West Asia/Europe",
+   "SubregionName": "Southern Europe",
+   "RegionOrder": 24
+  },
+  {
+   "DHS_CountryCode": "KE",
+   "CountryName": "Kenya",
+   "FIPS_CountryCode": "KE",
+   "ISO2_CountryCode": "KE",
+   "ISO3_CountryCode": "KEN",
+   "UNAIDS_CountryCode": "KEN",
+   "UNICEF_CountryCode": "KEN",
+   "UNSTAT_CountryCode": "KEN",
+   "WHO_CountryCode": "KE",
+   "RegionName": "Sub-Saharan Africa",
+   "SubregionName": "Eastern Africa",
+   "RegionOrder": 13
+  },
+  {
+   "DHS_CountryCode": "OS",
+   "CountryName": "Nigeria (Ondo State)",
+   "FIPS_CountryCode": "",
+   "ISO2_CountryCode": "",
+   "ISO3_CountryCode": "",
+   "UNAIDS_CountryCode": "",
+   "UNICEF_CountryCode": "",
+   "UNSTAT_CountryCode": "",
+   "WHO_CountryCode": "",
+   "RegionName": "Sub-Saharan Africa",
+   "SubregionName": "Western Africa",
+   "RegionOrder": 11
+  }
+ ]
+}
