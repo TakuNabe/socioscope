@@ -113,7 +113,7 @@
 
 ## 4. 分析方法の概要
 
-（分析はすべて公開データと公開コードで行い、手順と数値は GitHub の [socioscope リポジトリ](https://github.com/TakuNabe/socioscope) で再現できます。）
+（分析はすべて公開データと公開コードで行い、手順と数値は GitHub の [socioscope リポジトリ](https://github.com/mendorie/socioscope) で再現できます。）
 
 ### 「結果を見る前に仮説を固定する」
 
@@ -367,5 +367,5 @@ OECD 38 か国・1980〜2021 年で、同じ国の中の支出の増減と TFR �
 - European Commission, Standard Eurobarometer 91–105（data.europa.eu）: 出典表示で再利用可。
 - The DHS Program Indicator Data API, The Demographic and Health Surveys (DHS) Program. ICF. Originally funded by the United States Agency for International Development (USAID). Available from api.dhsprogram.com. [Accessed 10-05-2026]
 - 出典: 政府統計の総合窓口(e-Stat)、国民生活基礎調査（厚生労働省）および就業構造基本調査（総務省）を加工して作成。政府標準利用規約（第 2.0 版）。
-- 分析コードと詳細レポートは GitHub の socioscope リポジトリで公開しています（コードは MIT ライセンス）: https://github.com/TakuNabe/socioscope
-- この記事のもとになった総括レポート（数値の出所と再現手順つき）: https://github.com/TakuNabe/socioscope/blob/main/themes/growth-fertility/reports/2026-10-05-summary-growth-fertility.md図を転載する場合は上記の出典表記を付けてください。
+- 分析コードと詳細レポートは GitHub の socioscope リポジトリで公開しています（コードは MIT ライセンス）: https://github.com/mendorie/socioscope
+- この記事のもとになった総括レポート（数値の出所と再現手順つき）: https://github.com/mendorie/socioscope/blob/main/themes/growth-fertility/reports/2026-10-05-summary-growth-fertility.md図を転載する場合は上記の出典表記を付けてください。
