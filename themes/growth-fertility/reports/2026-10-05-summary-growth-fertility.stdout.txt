@@ -218,3 +218,123 @@ shape: (25, 5)
 └───────────────┴─────────────┴──────────┴──────────┴─────────┘
   Japan 2022 ln_gdp=10.754
 figure: s15_dhs_quintiles.png
+== H5 policy sample: n=1336 countries=38 ==
+[S a1] FE: tfr ~ family_total                              n= 1336 G= 38
+  family_total: +0.0239 (se 0.0635) [-0.1005, +0.1484]
+  r2=0.7732
+[S a1] FE: tfr ~ cash + inkind                             n= 1336 G= 38
+  cash: +0.0158 (se 0.0597) [-0.1012, +0.1327]
+  inkind: +0.0544 (se 0.1136) [-0.1684, +0.2771]
+  r2=0.7734
+[S a1] FE: tfr ~ family_total (t-3)                        n= 1219 G= 38
+  family_total_l3: +0.0384 (se 0.0599) [-0.0791, +0.1559]
+  r2=0.8090
+[S a1] FE: tfr ~ cash + inkind (t-3)                       n= 1219 G= 38
+  cash_l3: +0.0318 (se 0.0564) [-0.0787, +0.1423]
+  inkind_l3: +0.0579 (se 0.1077) [-0.1532, +0.2691]
+  r2=0.8092
+[S a2] cross-section ΔTFR 2010->2021 ~ level_2010 + Δspend n=   37 G= 37
+  spend_start: -0.0354 (se 0.0390) [-0.1118, +0.0411]
+  d_spend: -0.0484 (se 0.0310) [-0.1091, +0.0124]
+  r2=0.0631
+[S a2] ΔTFR ~ level_2010 only                              n=   37 G= 37
+  spend_start: -0.0074 (se 0.0352) [-0.0763, +0.0616]
+  r2=0.0010
+[S a2] ΔTFR ~ cash/in-kind levels + changes                n=   37 G= 37
+  cash_start: +0.0428 (se 0.0593) [-0.0735, +0.1590]
+  inkind_start: -0.1451 (se 0.0553) [-0.2536, -0.0366]
+  d_cash: -0.0414 (se 0.0327) [-0.1055, +0.0228]
+  d_inkind: +0.0208 (se 0.1474) [-0.2681, +0.3096]
+  r2=0.1675
+figure: s16_policy_vs_tfr.png
+== (b) census 2021 education gradient of married share (summary) ==
+  sex=M: countries=31 positive=23 negative=0 zero=8
+    ROU -0.0434 [-0.1128, +0.0259] zero
+    ITA -0.0123 [-0.0264, +0.0019] zero
+    AUT -0.0089 [-0.0389, +0.0211] zero
+    CHE -0.0078 [-0.0425, +0.0268] zero
+    ESP -0.0007 [-0.0095, +0.0081] zero
+    GRC +0.0058 [-0.0143, +0.0258] zero
+    PRT +0.0147 [+0.0030, +0.0265] positive
+    LIE +0.0155 [-0.0320, +0.0630] zero
+    CYP +0.0158 [-0.0052, +0.0368] zero
+    LUX +0.0176 [+0.0033, +0.0320] positive
+    MLT +0.0185 [+0.0086, +0.0283] positive
+    DEU +0.0305 [+0.0006, +0.0603] positive
+    SVN +0.0447 [+0.0237, +0.0657] positive
+    NLD +0.0491 [+0.0326, +0.0656] positive
+    SWE +0.0517 [+0.0162, +0.0872] positive
+    HRV +0.0539 [+0.0133, +0.0945] positive
+    BGR +0.0628 [+0.0419, +0.0837] positive
+    NOR +0.0638 [+0.0443, +0.0833] positive
+    BEL +0.0654 [+0.0475, +0.0832] positive
+    ISL +0.0701 [+0.0464, +0.0938] positive
+    FRA +0.0726 [+0.0540, +0.0911] positive
+    IRL +0.0770 [+0.0545, +0.0994] positive
+    SVK +0.0855 [+0.0533, +0.1177] positive
+    DNK +0.0969 [+0.0724, +0.1214] positive
+    FIN +0.0975 [+0.0654, +0.1296] positive
+    POL +0.1042 [+0.0703, +0.1382] positive
+    HUN +0.1067 [+0.0763, +0.1371] positive
+    LTU +0.1108 [+0.0832, +0.1384] positive
+    EST +0.1160 [+0.0991, +0.1329] positive
+    CZE +0.1279 [+0.0976, +0.1581] positive
+    LVA +0.1379 [+0.1117, +0.1641] positive
+  sex=F: countries=31 positive=16 negative=10 zero=5
+    ROU -0.1061 [-0.1768, -0.0355] negative
+    HRV -0.0517 [-0.0799, -0.0236] negative
+    ITA -0.0479 [-0.0695, -0.0264] negative
+    AUT -0.0467 [-0.0719, -0.0215] negative
+    GRC -0.0463 [-0.0738, -0.0187] negative
+    CHE -0.0459 [-0.0738, -0.0180] negative
+    LIE -0.0435 [-0.0817, -0.0054] negative
+    SVN -0.0388 [-0.0685, -0.0092] negative
+    ESP -0.0300 [-0.0450, -0.0151] negative
+    PRT -0.0227 [-0.0376, -0.0079] negative
+    DEU -0.0153 [-0.0392, +0.0086] zero
+    NLD -0.0008 [-0.0172, +0.0156] zero
+    MLT +0.0014 [-0.0195, +0.0223] zero
+    LUX +0.0059 [-0.0091, +0.0210] zero
+    CYP +0.0124 [-0.0075, +0.0322] zero
+    BEL +0.0319 [+0.0141, +0.0496] positive
+    NOR +0.0323 [+0.0150, +0.0497] positive
+    BGR +0.0335 [+0.0105, +0.0564] positive
+    ISL +0.0344 [+0.0162, +0.0526] positive
+    POL +0.0402 [+0.0087, +0.0718] positive
+    SWE +0.0411 [+0.0058, +0.0765] positive
+    FRA +0.0465 [+0.0254, +0.0677] positive
+    SVK +0.0491 [+0.0223, +0.0758] positive
+    FIN +0.0546 [+0.0184, +0.0907] positive
+    IRL +0.0603 [+0.0319, +0.0887] positive
+    DNK +0.0650 [+0.0458, +0.0843] positive
+    HUN +0.0661 [+0.0418, +0.0904] positive
+    EST +0.0693 [+0.0581, +0.0805] positive
+    LTU +0.0704 [+0.0481, +0.0926] positive
+    LVA +0.0841 [+0.0624, +0.1057] positive
+    CZE +0.0902 [+0.0630, +0.1174] positive
+  -> (b) men positive in 23/31: not supported (bar: >= 25)
+  women Nordic: NOR +0.032 (positive), ISL +0.034 (positive), SWE +0.041 (positive), FIN +0.055 (positive), DNK +0.065 (positive)
+  women South: ITA -0.048 (negative), GRC -0.046 (negative), ESP -0.030 (negative), PRT -0.023 (negative)
+figure: s17_census_gradients.png
+  CZE: d_known=-0.150 first_share=0.54
+  DEU: d_known=+0.184 first_share=0.29
+  ESP: d_known=-0.251 first_share=0.65
+  FIN: d_known=-0.619 first_share=0.37
+  HUN: d_known=+0.123 first_share=0.20
+  ISL: d_known=-0.621 first_share=0.33
+  ITA: d_known=-0.252 first_share=0.55
+  NLD: d_known=-0.358 first_share=0.50
+  NOR: d_known=-0.511 first_share=0.45
+  POL: d_known=-0.326 first_share=0.55
+  SWE: d_known=-0.566 first_share=0.45
+  KR 2015: -0.0387 (se 0.0130) [-0.0748, -0.0026]
+  KR 2016: -0.0449 (se 0.0128) [-0.0804, -0.0095]
+  KR 2017: -0.0388 (se 0.0132) [-0.0753, -0.0022]
+  KR 2018: -0.0435 (se 0.0190) [-0.0964, +0.0094]
+  KR 2019: -0.0524 (se 0.0177) [-0.1016, -0.0033]
+  KR 2020: -0.0449 (se 0.0154) [-0.0878, -0.0020]
+  KR 2021: -0.0566 (se 0.0178) [-0.1062, -0.0071]
+  KR 2022: -0.0474 (se 0.0204) [-0.1040, +0.0091]
+  KR 2023: -0.0438 (se 0.0189) [-0.0962, +0.0086]
+  KR 2024: -0.0435 (se 0.0209) [-0.1016, +0.0145]
+figure: s18_birth_order_korea.png

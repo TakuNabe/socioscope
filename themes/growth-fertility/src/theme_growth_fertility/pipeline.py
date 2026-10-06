@@ -11,7 +11,8 @@ from collections.abc import Callable, Sequence
 
 from socioscope_core.core.pipeline import Context, Stage, StageResult
 from socioscope_core.ports.fetcher import FetchError
-from theme_growth_fertility import dhs, estat
+from theme_growth_fertility import dhs, estat, kostat, oecd
+from theme_growth_fertility import eurostat as es
 from theme_growth_fertility import worldbank as wb
 
 THEME = "growth-fertility"
@@ -37,6 +38,27 @@ DHS_RAW_COUNTRIES = "dhs_countries.json"
 DHS_URLS: dict[str, str] = {DHS_RAW_DATA: dhs.data_url(), DHS_RAW_COUNTRIES: dhs.countries_url()}
 DHS_TABLE = "staged/dhs/tfr_by_wealth_quintile"
 DHS_MART = "marts/dhs_tfr_by_wealth_quintile"
+# ---- H5: OECD / Eurostat (independent of the sources above; see _fetch_h5/_stage_h5/_mart_h5)
+OECD_RAW = "socx_family_spending.csv"
+OECD_TABLE = "staged/oecd/family_spending"
+OECD_MART = "marts/oecd_family_spending"
+EU_TABLES: dict[str, str] = {
+    "cens_21me_r2": "staged/eurostat/census_marital_education",
+    "demo_fordagec": "staged/eurostat/births_by_order",
+    "demo_pjan": "staged/eurostat/population_female_age",
+    "demo_faeduc": "staged/eurostat/births_by_education",
+    "lfsa_pgaed": "staged/eurostat/lfs_population_female_education",
+}
+_EU_PARSERS: dict[str, Callable[[bytes], list[dict[str, object]]]] = {
+    "cens_21me_r2": es.census_rows,
+    "demo_fordagec": es.births_order_rows,
+    "demo_pjan": es.population_female_rows,
+    "demo_faeduc": es.births_education_rows,
+    "lfsa_pgaed": es.lfs_population_rows,
+}
+EU_CENSUS_MART = "marts/eu_census_marital_by_education"
+EU_TFR_ORDER_MART = "marts/eu_tfr_by_birth_order"
+EU_TFR_EDU_MART = "marts/eu_tfr_by_education"
 
 
 def _sources() -> dict[str, str]:
@@ -104,6 +126,11 @@ def fetch(ctx: Context) -> StageResult:
             payload=payload,
         )
         written.append(rec.relative_path)
+    # ---- H5: OECD / Eurostat
+    h5_written, h5_skipped = _fetch_h5(ctx)
+    written.extend(h5_written)
+    skipped.extend(h5_skipped)
+    written, skipped = _fetch_kostat(ctx, written, skipped)
     return StageResult(stage=Stage.FETCH, written=tuple(written), skipped=tuple(skipped))
 
 
@@ -179,10 +206,13 @@ def stage(ctx: Context) -> StageResult:
     wb_written, wb_skipped = _stage_worldbank(ctx)
     es_written, es_skipped = _stage_estat(ctx)
     dhs_written, dhs_skipped = _stage_dhs(ctx)
+    # ---- H5: OECD / Eurostat
+    h5_written, h5_skipped = _stage_h5(ctx)
+    dhs_written, dhs_skipped = _stage_kostat(ctx, dhs_written, dhs_skipped)
     return StageResult(
         stage=Stage.STAGE,
-        written=tuple(wb_written + es_written + dhs_written),
-        skipped=tuple(wb_skipped + es_skipped + dhs_skipped),
+        written=tuple(wb_written + es_written + dhs_written + h5_written),
+        skipped=tuple(wb_skipped + es_skipped + dhs_skipped + h5_skipped),
     )
 
 
@@ -431,4 +461,203 @@ def mart(ctx: Context) -> StageResult:
     else:
         ctx.tables.write_table(DHS_MART, build_dhs_mart(dhs_rows))
         written.append(DHS_MART)
+    # ---- H5: OECD / Eurostat
+    h5_written, h5_skipped = _mart_h5(ctx)
+    written.extend(h5_written)
+    skipped.extend(h5_skipped)
+    written, skipped = _mart_kostat(ctx, written, skipped)
     return StageResult(stage=Stage.MART, written=tuple(written), skipped=tuple(skipped))
+
+
+# ---- H5: OECD / Eurostat ----------------------------------------------------------------
+
+
+def _fetch_h5(ctx: Context) -> tuple[list[str], list[str]]:
+    """OECD SOCX family spending (1 CSV) + Eurostat JSON-stat, one request per dataset × country."""
+    written: list[str] = []
+    skipped: list[str] = []
+    items: list[tuple[str, str, str, str]] = [
+        (oecd.SOURCE, OECD_RAW, oecd.family_spending_url(), oecd.LICENSE)
+    ]
+    items.extend((es.SOURCE, r.raw_name, r.url, es.LICENSE) for r in es.requests())
+    for source, name, url, license_ in items:
+        try:
+            payload = ctx.fetcher.fetch(url)
+        except FetchError as e:
+            skipped.append(f"{name}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME, source=source, name=name, url=url, license=license_, payload=payload
+        )
+        written.append(rec.relative_path)
+    return written, skipped
+
+
+def _stage_h5(ctx: Context) -> tuple[list[str], list[str]]:
+    """One staged table per Eurostat dataset (countries concatenated) + the OECD table.
+
+    Missing countries are reported in *skipped*; a dataset with no raw at all is not written.
+    """
+    written: list[str] = []
+    skipped: list[str] = []
+    socx = ctx.raw.get(theme=THEME, source=oecd.SOURCE, name=OECD_RAW)
+    if socx is None:
+        skipped.append(f"{OECD_RAW}: raw missing (run fetch)")
+    else:
+        ctx.tables.write_table(OECD_TABLE, oecd.family_spending_rows(socx))
+        written.append(OECD_TABLE)
+    by_dataset: dict[str, list[dict[str, object]]] = {}
+    for req in es.requests():
+        payload = ctx.raw.get(theme=THEME, source=es.SOURCE, name=req.raw_name)
+        if payload is None:
+            skipped.append(f"{req.raw_name}: raw missing (run fetch)")
+            continue
+        by_dataset.setdefault(req.dataset, []).extend(_EU_PARSERS[req.dataset](payload))
+    for dataset, table in EU_TABLES.items():
+        if dataset in by_dataset:
+            ctx.tables.write_table(table, by_dataset[dataset])
+            written.append(table)
+    return written, skipped
+
+
+def _mart_h5(ctx: Context) -> tuple[list[str], list[str]]:
+    written: list[str] = []
+    skipped: list[str] = []
+    staged: dict[str, list[dict[str, object]]] = {}
+    for table in (OECD_TABLE, *EU_TABLES.values()):
+        try:
+            staged[table] = ctx.tables.read_table(table)
+        except FileNotFoundError:
+            skipped.append(f"{table}: staged table missing (run stage)")
+    if OECD_TABLE in staged:
+        rows = sorted(
+            staged[OECD_TABLE],
+            key=lambda r: (str(r["iso3"]), int(str(r["year"])), str(r["spending_type"])),
+        )
+        ctx.tables.write_table(OECD_MART, rows)
+        written.append(OECD_MART)
+    census = staged.get(EU_TABLES["cens_21me_r2"])
+    if census is not None:
+        ctx.tables.write_table(EU_CENSUS_MART, es.build_census_mart(census))
+        written.append(EU_CENSUS_MART)
+    births = staged.get(EU_TABLES["demo_fordagec"])
+    women = staged.get(EU_TABLES["demo_pjan"])
+    if births is not None and women is not None:
+        ctx.tables.write_table(EU_TFR_ORDER_MART, es.build_tfr_by_order(births, women))
+        written.append(EU_TFR_ORDER_MART)
+    births_edu = staged.get(EU_TABLES["demo_faeduc"])
+    lfs = staged.get(EU_TABLES["lfsa_pgaed"])
+    if births_edu is not None and lfs is not None:
+        ctx.tables.write_table(EU_TFR_EDU_MART, es.build_tfr_by_education(births_edu, lfs))
+        written.append(EU_TFR_EDU_MART)
+    return written, skipped
+
+
+# ---- H5: Korea newlywed statistics (PDF) ------------------------------------------------
+# 국가데이터처 신혼부부통계 press releases (one PDF per reference year, KOGL type 1). Fetched,
+# staged and marted independently of the sources above; every helper appends to and returns the
+# accumulators it is given so the fetch/stage/mart bodies only need one extra line each.
+
+KOSTAT_TABLE = "staged/kostat/newlywed_income_children"
+KOSTAT_MART = "marts/kr_newlywed_income_children"
+KOSTAT_METRICS: tuple[str, ...] = (
+    "with_children_share",
+    "mean_children",
+    "couples",
+    "children_1_share",
+    "children_2_share",
+    "children_3plus_share",
+)
+
+
+def _fetch_kostat(
+    ctx: Context, written: list[str], skipped: list[str]
+) -> tuple[list[str], list[str]]:
+    for release in kostat.RELEASES:
+        try:
+            payload = ctx.fetcher.fetch(release.url)
+        except FetchError as e:
+            skipped.append(f"{release.raw_name}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME,
+            source=kostat.SOURCE,
+            name=release.raw_name,
+            url=release.url,
+            license=kostat.LICENSE,
+            payload=payload,
+        )
+        written.append(rec.relative_path)
+    return written, skipped
+
+
+def _stage_kostat(
+    ctx: Context, written: list[str], skipped: list[str]
+) -> tuple[list[str], list[str]]:
+    """One staged table concatenating every release whose PDF parses. A release whose table
+    layout is not recognised is reported in *skipped* and does not block the others."""
+    rows: list[dict[str, object]] = []
+    for release in kostat.RELEASES:
+        payload = ctx.raw.get(theme=THEME, source=kostat.SOURCE, name=release.raw_name)
+        if payload is None:
+            skipped.append(f"{release.raw_name}: raw missing (run fetch)")
+            continue
+        try:
+            rows.extend(kostat.income_children_rows(payload, release))
+        except ValueError as e:
+            skipped.append(f"{release.raw_name}: layout not recognised ({e})")
+    if rows:
+        ctx.tables.write_table(KOSTAT_TABLE, rows)
+        written.append(KOSTAT_TABLE)
+    return written, skipped
+
+
+def build_kostat_mart(rows: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    """Long table (one metric per row). Pure and deterministic.
+
+    Consecutive releases re-publish the previous reference year; for each
+    (ref_year, income_concept, income_class) the row from the latest release wins (revisions,
+    and exact counts instead of the thousands printed by older releases).
+    """
+    latest: dict[tuple[int, str, str], dict[str, object]] = {}
+    for r in rows:
+        k = (int(str(r["ref_year"])), str(r["income_concept"]), str(r["income_class"]))
+        cur = latest.get(k)
+        if cur is None or int(str(r["release_year"])) > int(str(cur["release_year"])):
+            latest[k] = r
+
+    def key(k: tuple[int, str, str]) -> tuple[int, str, int]:
+        lower = latest[k]["income_lower_10k_krw"]
+        return (k[0], k[1], -1 if lower is None else int(str(lower)))
+
+    out: list[dict[str, object]] = []
+    for k in sorted(latest, key=key):
+        r = latest[k]
+        for metric in KOSTAT_METRICS:
+            out.append(
+                {
+                    "ref_year": r["ref_year"],
+                    "release_year": r["release_year"],
+                    "income_class": r["income_class"],
+                    "income_lower_10k_krw": r["income_lower_10k_krw"],
+                    "income_upper_10k_krw": r["income_upper_10k_krw"],
+                    "metric": metric,
+                    "value": r[metric],
+                    "income_concept": r["income_concept"],
+                    "source": r["source"],
+                }
+            )
+    return out
+
+
+def _mart_kostat(
+    ctx: Context, written: list[str], skipped: list[str]
+) -> tuple[list[str], list[str]]:
+    try:
+        staged_rows = ctx.tables.read_table(KOSTAT_TABLE)
+    except FileNotFoundError:
+        skipped.append(f"{KOSTAT_TABLE}: staged table missing (run stage)")
+        return written, skipped
+    ctx.tables.write_table(KOSTAT_MART, build_kostat_mart(staged_rows))
+    written.append(KOSTAT_MART)
+    return written, skipped

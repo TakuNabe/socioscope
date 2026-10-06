@@ -4,7 +4,8 @@ import pytest
 
 from socioscope_core.core.pipeline import Context, Stage
 from socioscope_core.testing.fakes import FakeFetcher, InMemoryRawStore, InMemoryTableStore
-from theme_growth_fertility import dhs, estat, pipeline
+from theme_growth_fertility import dhs, estat, kostat, oecd, pipeline
+from theme_growth_fertility import eurostat as es
 from theme_growth_fertility import worldbank as wb
 from theme_growth_fertility.pipeline import build_panel
 from theme_growth_fertility.wiring import PIPELINE
@@ -14,6 +15,16 @@ FIXTURE = (FIXTURES / "tfr_page.json").read_bytes()
 COUNTRIES = (FIXTURES / "countries_page.json").read_bytes()
 DHS_DATA = (FIXTURES / "dhs_tfr_wealth_page.json").read_bytes()
 DHS_COUNTRIES = (FIXTURES / "dhs_countries_page.json").read_bytes()
+OECD_CSV = (FIXTURES / "oecd_socx_family.csv").read_bytes()
+EUROSTAT_FIXTURE_BY_DATASET = {
+    "cens_21me_r2": (FIXTURES / "eurostat_cens_fi.json").read_bytes(),
+    "demo_fordagec": (FIXTURES / "eurostat_fordagec_fi.json").read_bytes(),
+    "demo_pjan": (FIXTURES / "eurostat_pjan_fi.json").read_bytes(),
+    "demo_faeduc": (FIXTURES / "eurostat_faeduc_fi.json").read_bytes(),
+    "lfsa_pgaed": (FIXTURES / "eurostat_lfsa_fi.json").read_bytes(),
+}
+# H5 fetch items: one OECD CSV + one Eurostat request per dataset x country
+H5_REQUESTS = 1 + len(es.requests())
 
 
 def make_ctx(responses: dict[str, bytes]) -> Context:
@@ -26,6 +37,16 @@ def all_responses() -> dict[str, bytes]:
     out = {wb.indicator_url(code): FIXTURE for code in wb.INDICATORS.values()}
     out[wb.countries_url()] = COUNTRIES
     out.update(dhs_responses())
+    out.update(h5_responses())
+    return out
+
+
+def h5_responses() -> dict[str, bytes]:
+    """OECD CSV + the five Eurostat datasets for Finland only (other countries stay skipped)."""
+    out = {oecd.family_spending_url(): OECD_CSV}
+    for r in es.requests():
+        if r.geo == "FI":
+            out[r.url] = EUROSTAT_FIXTURE_BY_DATASET[r.dataset]
     return out
 
 
@@ -39,7 +60,9 @@ def test_fetch_stores_raw_with_manifest_and_reports_failures() -> None:
 
     assert result.written == ("growth-fertility/worldbank_wdi/tfr.json",)
     # every other indicator + countries + all e-Stat tables + 2 DHS files had no fake response
-    assert len(result.skipped) == len(wb.INDICATORS) + len(estat.TABLES) + 2
+    assert len(result.skipped) == len(wb.INDICATORS) + len(estat.TABLES) + 2 + H5_REQUESTS + len(
+        kostat.RELEASES
+    )
     recs = ctx.raw.records()
     assert len(recs) == 1 and recs[0].license.startswith("CC BY 4.0")
     assert ctx.raw.get(theme="growth-fertility", source="worldbank_wdi", name="tfr.json") == FIXTURE
@@ -63,7 +86,8 @@ def test_fetch_also_stores_country_metadata() -> None:
     ctx = make_ctx(all_responses())
     result = PIPELINE.run(Stage.FETCH, ctx)
     assert "growth-fertility/worldbank_wdi/countries.json" in result.written
-    assert all(s.startswith(tuple(t.key for t in estat.TABLES)) for s in result.skipped)
+    estat_keys = tuple(t.key for t in estat.TABLES)
+    assert all(s.startswith((*estat_keys, "eurostat_", "newlywed_")) for s in result.skipped)
 
 
 def test_stage_then_mart_build_panel_from_raw() -> None:
@@ -73,6 +97,8 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
     assert set(staged.written) == {f"staged/worldbank/{k}" for k in wb.INDICATORS} | {
         "staged/worldbank/countries",
         pipeline.DHS_TABLE,
+        pipeline.OECD_TABLE,
+        *pipeline.EU_TABLES.values(),
     }
     # the 'NAC' aggregate is dropped at stage using the country metadata
     assert [r["iso3"] for r in ctx.tables.read_table("staged/worldbank/tfr")] == [
@@ -82,7 +108,14 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
     ]
 
     mart = PIPELINE.run(Stage.MART, ctx)
-    assert mart.written == ("marts/growth_fertility_panel", pipeline.DHS_MART)
+    assert mart.written == (
+        "marts/growth_fertility_panel",
+        pipeline.DHS_MART,
+        pipeline.OECD_MART,
+        pipeline.EU_CENSUS_MART,
+        pipeline.EU_TFR_ORDER_MART,
+        pipeline.EU_TFR_EDU_MART,
+    )
     panel = ctx.tables.read_table("marts/growth_fertility_panel")
     assert panel[0] == {
         "iso3": "JPN",
@@ -107,7 +140,9 @@ def test_stage_without_raw_skips_explicitly() -> None:
     ctx = make_ctx({})
     result = PIPELINE.run(Stage.STAGE, ctx)
     assert result.written == ()
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES) + 2
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(
+        estat.TABLES
+    ) + 2 + H5_REQUESTS + len(kostat.RELEASES)
 
 
 # ---------------------------------------------------------------- e-Stat (国民生活基礎調査)
@@ -134,7 +169,8 @@ def test_fetch_stores_estat_files_with_license() -> None:
     assert "growth-fertility/estat_kiso/workers_marital_income_2025.csv" in result.written
     assert "growth-fertility/estat_shugyo/shugyo_marital_age_income_2022.xlsx" in result.written
     assert len([w for w in result.written if "/estat_kiso/" in w]) == len(estat.TABLES) - 1
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + 2  # no World Bank / DHS responses
+    # no World Bank / DHS / OECD / Eurostat responses
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + 2 + H5_REQUESTS + len(kostat.RELEASES)
     recs = [r for r in ctx.raw.records() if r.source in {"estat_kiso", "estat_shugyo"}]
     assert len(recs) == len(estat.TABLES)
     assert all("政府標準利用規約" in r.license and "CC BY 4.0" in r.license for r in recs)
@@ -382,7 +418,9 @@ def test_fetch_stores_dhs_files_with_citation_license() -> None:
         "growth-fertility/dhs_api/dhs_tfr_wealth.json",
         "growth-fertility/dhs_api/dhs_countries.json",
     )
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES)
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES) + H5_REQUESTS + len(
+        kostat.RELEASES
+    )
     recs = ctx.raw.records()
     assert {r.source for r in recs} == {dhs.SOURCE}
     assert all("The DHS Program Indicator Data API" in r.license for r in recs)
@@ -450,3 +488,292 @@ def test_build_dhs_mart_sorts_and_keeps_rows_unchanged() -> None:
     b = {"survey_year": 2008, "iso3": "ALB", "quintile": 5, "value": None}
     c = {"survey_year": 2015, "iso3": "AFG", "quintile": 1, "value": 5.3}
     assert pipeline.build_dhs_mart([a, b, c]) == [b, c, a]
+
+
+# ---------------------------------------------------------------- H5: OECD SOCX / Eurostat
+
+
+def test_fetch_stores_oecd_and_eurostat_raw_with_licenses() -> None:
+    ctx = make_ctx(h5_responses())
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert result.written[0] == "growth-fertility/oecd_socx/socx_family_spending.csv"
+    assert "growth-fertility/eurostat/eurostat_cens_21me_r2_FI.json" in result.written
+    assert "growth-fertility/eurostat/eurostat_lfsa_pgaed_FI.json" in result.written
+    assert len(result.written) == 1 + 5
+    # everything else (WB, e-Stat, DHS, Eurostat for the other countries) is skipped, not fatal
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES) + 2 + (
+        H5_REQUESTS - 6
+    ) + len(kostat.RELEASES)
+    assert sum(s.startswith("eurostat_cens_21me_r2_") for s in result.skipped) == 30
+    recs = ctx.raw.records()
+    assert {r.source for r in recs} == {oecd.SOURCE, es.SOURCE}
+    oecd_rec = next(r for r in recs if r.source == oecd.SOURCE)
+    assert "OECD Terms" in oecd_rec.license and oecd_rec.url == oecd.family_spending_url()
+    eu_rec = next(r for r in recs if r.source == es.SOURCE)
+    assert "copyright-notice" in eu_rec.license and "cens_21me_r2" in eu_rec.url
+
+
+def test_stage_oecd_family_spending_independent_of_other_sources() -> None:
+    ctx = make_ctx({oecd.family_spending_url(): OECD_CSV})
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert result.written == (pipeline.OECD_TABLE,)
+    rows = ctx.tables.read_table(pipeline.OECD_TABLE)
+    assert {r["iso3"] for r in rows} == {"FIN", "KOR"}
+    assert set(rows[0]) == {"iso3", "year", "spending_type", "value", "unit", "source"}
+    assert {r["source"] for r in rows} == {"oecd_socx"}
+    mart = PIPELINE.run(Stage.MART, ctx)
+    assert mart.written == (pipeline.OECD_MART,)
+    assert ctx.tables.read_table(pipeline.OECD_MART) == rows  # staged already sorted
+
+
+def test_stage_eurostat_concatenates_countries_and_reports_missing() -> None:
+    ctx = make_ctx(h5_responses())
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert set(result.written) == {pipeline.OECD_TABLE, *pipeline.EU_TABLES.values()}
+    assert sum("raw missing" in s for s in result.skipped if s.startswith("eurostat_")) == (
+        len(es.requests()) - 5
+    )
+    census = ctx.tables.read_table(pipeline.EU_TABLES["cens_21me_r2"])
+    assert len(census) == 60 and {r["iso3"] for r in census} == {"FIN"}
+    assert {r["year"] for r in census} == {2021}
+    lfs = ctx.tables.read_table(pipeline.EU_TABLES["lfsa_pgaed"])
+    assert len(lfs) == 27 and {r["source"] for r in lfs} == {"eurostat"}
+
+
+def test_stage_eurostat_without_any_raw_writes_nothing() -> None:
+    ctx = make_ctx({})
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert result.written == ()
+    assert "socx_family_spending.csv: raw missing (run fetch)" in result.skipped
+
+
+def test_mart_eurostat_tables_from_staged_only() -> None:
+    ctx = make_ctx(
+        {r.url: EUROSTAT_FIXTURE_BY_DATASET[r.dataset] for r in es.requests() if r.geo == "FI"}
+    )
+    PIPELINE.run(Stage.FETCH, ctx)
+    PIPELINE.run(Stage.STAGE, ctx)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == (
+        pipeline.EU_CENSUS_MART,
+        pipeline.EU_TFR_ORDER_MART,
+        pipeline.EU_TFR_EDU_MART,
+    )
+    assert any(pipeline.OECD_TABLE in s for s in result.skipped)
+    census = ctx.tables.read_table(pipeline.EU_CENSUS_MART)
+    assert len(census) == 12 and set(census[0]) == {
+        "iso3", "year", "sex", "age_class", "age_lower", "age_upper", "isced_group",
+        "married", "total", "married_share", "source",
+    }  # fmt: skip
+    order = ctx.tables.read_table(pipeline.EU_TFR_ORDER_MART)
+    assert [r["order"] for r in order] == ["1", "2", "3", "GE4", "TOTAL", "UNK"]
+    assert set(order[0]) == {"iso3", "year", "order", "tfr", "births_age_unknown", "source"}
+    edu = ctx.tables.read_table(pipeline.EU_TFR_EDU_MART)
+    assert [r["isced_group"] for r in edu] == ["ED0-2", "ED3_4", "ED5-8", "TOTAL"]
+    assert set(edu[0]) == {"iso3", "year", "isced_group", "tfr", "women_total_thousand", "source"}
+
+
+def test_mart_tfr_by_order_needs_both_births_and_women() -> None:
+    births_only = next(r for r in es.requests() if r.dataset == "demo_fordagec" and r.geo == "FI")
+    ctx = make_ctx({births_only.url: EUROSTAT_FIXTURE_BY_DATASET["demo_fordagec"]})
+    PIPELINE.run(Stage.FETCH, ctx)
+    PIPELINE.run(Stage.STAGE, ctx)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == ()
+    assert any(pipeline.EU_TABLES["demo_pjan"] in s for s in result.skipped)
+
+
+# ---- H5: Korea newlywed statistics (PDF) ------------------------------------------------
+
+
+def kostat_release(year: int) -> kostat.Release:
+    return next(r for r in kostat.RELEASES if r.ref_year == year)
+
+
+def kostat_pages(year: int) -> list[str]:
+    return (FIXTURES / f"kostat_newlywed_{year}.txt").read_text(encoding="utf-8").split("\f")
+
+
+def test_fetch_kostat_stores_each_release_pdf_with_kogl_license(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    pdf = pdf_from_pages(kostat_pages(2024))
+    ctx = make_ctx({kostat_release(2024).url: pdf, kostat_release(2015).url: b"%PDF-1.4 junk"})
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert "growth-fertility/kostat_newlywed/newlywed_2024.pdf" in result.written
+    assert "growth-fertility/kostat_newlywed/newlywed_2015.pdf" in result.written
+    assert (
+        ctx.raw.get(theme="growth-fertility", source=kostat.SOURCE, name="newlywed_2024.pdf") == pdf
+    )
+    assert any(s.startswith("newlywed_2016.pdf:") for s in result.skipped)
+    recs = [r for r in ctx.raw.records() if r.source == kostat.SOURCE]
+    assert len(recs) == 2 and all("KOGL" in r.license for r in recs)
+    assert {r.url for r in recs} == {kostat_release(2024).url, kostat_release(2015).url}
+
+
+def test_stage_kostat_concatenates_releases_and_skips_unrecognised_layout(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    ctx = make_ctx(
+        {
+            kostat_release(2024).url: pdf_from_pages(kostat_pages(2024)),
+            kostat_release(2015).url: pdf_from_pages(kostat_pages(2015)),
+            kostat_release(2019).url: pdf_from_pages(["- 1 -\n신혼부부 수\n전체 1,000"]),
+            kostat_release(2018).url: b"<html>maintenance</html>",
+        }
+    )
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert pipeline.KOSTAT_TABLE in result.written
+    rows = ctx.tables.read_table(pipeline.KOSTAT_TABLE)
+    assert set(rows[0]) == {
+        "release_year",
+        "ref_year",
+        "population",
+        "income_class",
+        "income_lower_10k_krw",
+        "income_upper_10k_krw",
+        "couples",
+        "with_children_share",
+        "children_1_share",
+        "children_2_share",
+        "children_3plus_share",
+        "mean_children",
+        "income_concept",
+        "source",
+    }
+    assert sorted({(r["release_year"], r["ref_year"]) for r in rows}) == [
+        (2015, 2015),
+        (2024, 2023),
+        (2024, 2024),
+    ]
+    assert len(rows) == 21
+    assert any(
+        s.startswith("newlywed_2019.pdf: layout not recognised (") and "not found" in s
+        for s in result.skipped
+    )
+    assert any(s.startswith("newlywed_2018.pdf: layout not recognised (") for s in result.skipped)
+    assert any(s.startswith("newlywed_2016.pdf: raw missing") for s in result.skipped)
+    # other sources untouched: nothing of WB / e-Stat / DHS was written
+    assert all(name == pipeline.KOSTAT_TABLE for name in result.written)
+
+
+def test_stage_kostat_writes_nothing_without_any_raw() -> None:
+    ctx = make_ctx({})
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert pipeline.KOSTAT_TABLE not in result.written
+    assert pipeline.KOSTAT_TABLE not in ctx.tables.list_tables()
+    assert sum(s.startswith("newlywed_") and "raw missing" in s for s in result.skipped) == len(
+        kostat.RELEASES
+    )
+
+
+def test_mart_kostat_long_table_prefers_latest_release_per_ref_year(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    ctx = make_ctx(
+        {
+            kostat_release(2024).url: pdf_from_pages(kostat_pages(2024)),
+            kostat_release(2023).url: pdf_from_pages(kostat_pages(2023)),  # 2022 + 2023 (dup 2023)
+            kostat_release(2015).url: pdf_from_pages(kostat_pages(2015)),  # wage_only
+            kostat_release(2016).url: pdf_from_pages(kostat_pages(2016)),  # 2015 earned + 2016
+        }
+    )
+    PIPELINE.run(Stage.FETCH, ctx)
+    PIPELINE.run(Stage.STAGE, ctx)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == (pipeline.KOSTAT_MART,)
+    rows = ctx.tables.read_table(pipeline.KOSTAT_MART)
+    assert set(rows[0]) == {
+        "ref_year",
+        "release_year",
+        "income_class",
+        "income_lower_10k_krw",
+        "income_upper_10k_krw",
+        "metric",
+        "value",
+        "income_concept",
+        "source",
+    }
+    metrics = {
+        "with_children_share",
+        "mean_children",
+        "couples",
+        "children_1_share",
+        "children_2_share",
+        "children_3plus_share",
+    }
+    assert {str(r["metric"]) for r in rows} == metrics
+    # ref years: 2015 (wage_only + earned_business), 2016, 2022, 2023, 2024 -> 6 blocks × 7 × 6
+    assert len(rows) == 6 * 7 * 6
+    keyed = {(r["ref_year"], r["income_concept"], r["income_class"], r["metric"]): r for r in rows}
+    r2023 = keyed[(2023, "earned_business", "total", "with_children_share")]
+    assert r2023["release_year"] == 2024 and r2023["value"] == pytest.approx(0.525)
+    assert keyed[(2015, "wage_only", "total", "couples")]["value"] == 852_618
+    assert keyed[(2015, "earned_business", "total", "couples")]["value"] == 1_179_000
+    assert keyed[(2024, "earned_business", "ge_10000", "mean_children")]["value"] == 0.53
+    assert keyed[(2024, "earned_business", "lt_1000", "couples")]["income_upper_10k_krw"] == 1000
+    # sorted by ref_year, income_concept, then income lower bound (total first)
+    order = [
+        (r["ref_year"], r["income_concept"], r["income_class"])
+        for r in rows
+        if r["metric"] == "couples"
+    ]
+    assert order[:8] == [
+        (2015, "earned_business", "total"),
+        (2015, "earned_business", "lt_1000"),
+        (2015, "earned_business", "1000_3000"),
+        (2015, "earned_business", "3000_5000"),
+        (2015, "earned_business", "5000_7000"),
+        (2015, "earned_business", "7000_10000"),
+        (2015, "earned_business", "ge_10000"),
+        (2015, "wage_only", "total"),
+    ]
+    assert order[-1] == (2024, "earned_business", "ge_10000")
+
+
+def test_mart_kostat_skipped_when_staged_missing() -> None:
+    ctx = make_ctx({})
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert pipeline.KOSTAT_MART not in result.written
+    assert any(
+        s.startswith(f"{pipeline.KOSTAT_TABLE}: staged table missing") for s in result.skipped
+    )
+
+
+def test_build_kostat_mart_is_pure_and_deterministic() -> None:
+    staged = [
+        {
+            "release_year": 2021,
+            "ref_year": 2021,
+            "population": "first_marriage_within_5y",
+            "income_class": "total",
+            "income_lower_10k_krw": None,
+            "income_upper_10k_krw": None,
+            "couples": 10,
+            "with_children_share": 0.5,
+            "children_1_share": 0.4,
+            "children_2_share": 0.1,
+            "children_3plus_share": 0.0,
+            "mean_children": 0.6,
+            "income_concept": "earned_business",
+            "source": "kostat_newlywed",
+        },
+        {
+            "release_year": 2022,
+            "ref_year": 2021,
+            "population": "first_marriage_within_5y",
+            "income_class": "total",
+            "income_lower_10k_krw": None,
+            "income_upper_10k_krw": None,
+            "couples": 11,
+            "with_children_share": 0.5,
+            "children_1_share": 0.4,
+            "children_2_share": 0.1,
+            "children_3plus_share": 0.0,
+            "mean_children": 0.6,
+            "income_concept": "earned_business",
+            "source": "kostat_newlywed",
+        },
+    ]
+    out = pipeline.build_kostat_mart(staged)
+    assert len(out) == 6
+    assert {r["release_year"] for r in out} == {2022}
+    assert next(r for r in out if r["metric"] == "couples")["value"] == 11
+    assert out == pipeline.build_kostat_mart(list(reversed(staged)))

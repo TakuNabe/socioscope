@@ -13,13 +13,15 @@
 | World Bank WDI API | GDP 成長率、出生率、人口、Gini 等（国×年） | REST JSON（`api.worldbank.org/v2`） | CC BY 4.0 | **採用**（growth-fertility） |
 | World Inequality Database (WID.world) | 所得・資産の上位シェア、人口、長期系列 | 国別 zip（`bulk_download/WID_fulldataset_<ISO2>.zip`） | **CC BY-NC-SA 4.0**（サイト表記。CC BY 4.0 は未確認） | **採用**（wealth-population-distribution） |
 | UN World Population Prospects | 人口・年齢構成・出生率 | CSV / API | CC BY 3.0 IGO | 候補 |
-| OECD Data Explorer（SDMX REST） | 最高限界所得税率（Tax Database Table I.7）、公的社会支出 %GDP（SOCX）、税収 %GDP・相続税収 %GDP（Revenue Statistics） | SDMX REST CSV（`sdmx.oecd.org/public/rest/data/...?format=csvfilewithlabels`、鍵不要） | **OECD Terms & Conditions（2024-07-01 改定）: 出典表示で商用含め自由利用。OECD 発行物は CC BY 4.0**（確認 2026-10-04） | **採用**（wealth-population-distribution H2） |
+| OECD Data Explorer（SDMX REST） | 最高限界所得税率（Tax Database Table I.7）、公的社会支出 %GDP（SOCX）、税収 %GDP・相続税収 %GDP（Revenue Statistics）；家族支出 TP51（growth-fertility H5） | SDMX REST CSV（`sdmx.oecd.org/public/rest/data/...?format=csvfilewithlabels`、鍵不要） | **OECD Terms & Conditions（2024-07-01 改定）: 出典表示で商用含め自由利用。OECD 発行物は CC BY 4.0**（確認 2026-10-04） | **採用**（wealth-population-distribution H2 / growth-fertility H5） |
+| Eurostat dissemination API（JSON-stat 2.0） | 2021 センサス 配偶関係×年齢×性×ISCED（`cens_21me_r2`）、母の年齢×出生順位の出生数（`demo_fordagec`）、女性人口（`demo_pjan`）、母の年齢×ISCED の出生数（`demo_faeduc`）、LFS 女性人口×ISCED（`lfsa_pgaed`） | REST JSON（`ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<dataset>?format=JSON&lang=EN&<dim>=<code>`、キー不要、国別リクエスト） | **Eurostat copyright notice: 出典表示で商用含め再利用可**（第三国データは別条件、本件は EU/EFTA のみ。確認 2026-10-06） | **採用**（growth-fertility H5） |
 | OECD Data Explorer（IDD 等） | 所得分配（IDD）、出生率 | SDMX API | 同上 | 候補 |
 | Maddison Project / Penn World Table | 長期 GDP 系列 | Excel/CSV | 要確認 | 候補（戦後長期） |
 | Our World in Data | 整形済み系列（出典明記） | CSV / grapher API | CC BY | 候補（検証用） |
 | e-Stat（政府統計の総合窓口） | 国民生活基礎調査 所得票（所得階級×配偶者の有無・児童のいる世帯） | 統計表ファイル直接ダウンロード（`stat-search/file-download?statInfId=…&fileKind=1`、appId 不要） | **政府標準利用規約（第2.0版）＝CC BY 4.0 互換**（確認 2026-10-04） | **採用**（growth-fertility H3） |
 | e-Stat — 就業構造基本調査（総務省） | 令和4年 全国編 第40表: 男女×配偶関係×年齢×所得（有業者） | 統計表ファイル直接ダウンロード（`…&fileKind=0`、**Excel のみ**、appId 不要。標準ライブラリで解析） | 同上（確認 2026-10-04） | **採用**（growth-fertility H3b 年齢調整） |
 | DHS Program Indicator Data API | 調査前 3 年の TFR（15–49 歳）× 富裕五分位（`FE_FRTR_W_TFR` × Wealth quintile）、約 90 か国 1990–2025 の DHS/MIS/AIS 調査；国コード表（ISO3） | REST JSON（`api.dhsprogram.com/rest/dhs/data`, `/countries`、API キー不要） | **引用義務**（Terms: 「The DHS Program Indicator Data API, The Demographic and Health Surveys (DHS) Program. ICF. Originally funded by USAID. Available from api.dhsprogram.com. [Accessed 10-05-2026]」。確認 2026-10-05） | **採用**（growth-fertility H4） |
+| 国家データ処（韓国）新婚夫婦統計 報道資料 PDF | 初婚新婚夫婦（婚姻 5 年以内）の所得区間（6 区間＋全体）× 子ども有無・人数・平均子ども数、2015–2024 年基準 | 報道資料掲示板の静的 PDF（`mods.go.kr/boardDownload.es?bid=11815&list_no=…&seq=…`、キー不要。pypdf でテキスト抽出し表をパース） | **公共ヌリ（KOGL）第 1 類型＝出典表示のみ・商用・改変可**（確認 2026-10-06） | **採用**（growth-fertility H5） |
 | 国立社会保障・人口問題研究所 | 出生動向基本調査、将来推計人口 | CSV/Excel | 要確認 | 候補（日本） |
 | 国税庁 統計年報 / 民間給与実態統計 | 所得分布 | Excel | 政府標準利用規約 | 候補（日本） |
 | 野村総研 富裕層レポート等 | 資産階層別世帯数（推計） | PDF（公開レポート） | 引用のみ | 候補（LLM 構造化対象） |
@@ -124,6 +126,50 @@
   - ISO3 の付かない DHS 国コード（サブナショナル調査 `OS` 等）の行は落とし、stage の skipped に残す。
   - `CILow`/`CIHigh`/`DenominatorWeighted` はこの指標では全件空（None）。列は保持する。
   - 対象国は低・中所得国に偏る（高所得国の国内勾配は観測できない）。同一国の複数調査は調査種別（DHS/MIS/AIS）が混在する。
+
+### Eurostat dissemination API（JSON-stat 2.0）— 欧州の学歴別 有配偶率・出生順位別／学歴別 TFR（growth-fertility H5）
+- URL / API: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<dataset>?format=JSON&lang=EN&geo=<geo>&<dim>=<code>…`（同一次元の複数値は引数を繰り返す。`sinceTimePeriod=<year>` で開始年）。**API キー不要**。レスポンスは JSON-stat 2.0（`class: "dataset"`, `id`（次元順）, `size`, `dimension.<d>.category.index`（code→位置）, `value` は**疎な dict（文字列セル番号→値）**、`status` に欠損フラグ）。エラーは `{"error": …}` の JSON。`theme_growth_fertility.eurostat.jsonstat_rows` が各セルを次元コード dict に展開し、`value` に無いセルは出さない（補完しない）。`error` / `class != dataset` / `id`・`size`・`value` 欠落 / 次元サイズ不一致は `ValueError`（fail-closed）。
+- 採用 dataset（2026-10-06 に実レスポンスで次元コードを確認）。すべて国別に 1 リクエスト（raw `eurostat_<dataset>_<geo>.json`）:
+  | dataset | 次元（`id` 順） | 絞り込み | 対象国 | 年 |
+  |---|---|---|---|---|
+  | `cens_21me_r2` | freq.isced11.marsta.age.sex.unit.geo.time | sex=M,F; age=Y25-29…Y55-59（7 階級）; marsta=TOTAL,MAR_REP,UNK; isced11 全部（TOTAL, ED0…ED8, NAP, UNK） | EU27＋EFTA（IS NO CH LI）の 31 か国。geo は 2 文字の国コードのみ採用（NUTS 行は落とす） | 2021 |
+  | `demo_fordagec` | freq.unit.age.ord_brth.geo.time | age=Y15…Y49（1 歳刻み 35 本）＋UNK; ord_brth 全部（TOTAL,1,2,3,GE4,UNK） | FI SE NO DK IS DE FR IT ES NL HU CZ PL | 2005– |
+  | `demo_pjan` | freq.unit.age.sex.geo.time | sex=F; age=Y15…Y49 | 同上 | 2005– |
+  | `demo_faeduc` | freq.unit.age.isced11.geo.time | age=1 歳刻み Y15…Y49 ＋ 5 歳階級 Y15-19…Y45-49 ＋ UNK（国により片方しか無い。FI は 1 歳刻みのみ）; isced11 全部（TOTAL, ED0-2, ED3_4, ED5-8, NAP, UNK） | FI SE NO DK IS NL BE AT | 2007– |
+  | `lfsa_pgaed` | freq.unit.sex.age.isced11.geo.time | sex=F; age=Y15-19…Y45-49; isced11=ED0-2,ED3_4,ED5-8,TOTAL（単位 THS_PER＝千人） | 同上 | 2007– |
+- geo → ISO3 は固定辞書 `eurostat.GEO_TO_ISO3`（EU27＋EFTA＋UK。`EL`→GRC、`UK`→GBR）。pycountry は使わない。
+- ライセンス・利用規約（確認日 2026-10-06、`https://ec.europa.eu/eurostat/web/main/help/copyright-notice`）: Eurostat のデータは出典を明記すれば商用を含め自由に再利用・改変・配布できる（Commission Decision 2011/833/EU）。第三国（非 EU/EFTA）データは権利者の条件が別だが、本件は EU/EFTA のみ。出典表記: 「Source: Eurostat, <dataset>（accessed 2026-10-06）」。raw はコミットしない。
+- 取得方法: `theme_growth_fertility.eurostat`（`Request` の URL 組み立て、`jsonstat_rows`、`census_rows` 等の純粋変換、`build_census_mart` / `build_tfr_by_order` / `build_tfr_by_education` の純粋集計）＋ `pipeline._fetch_h5` / `_stage_h5` / `_mart_h5`（`HttpxFetcher`）。**73 リクエスト**（31 ＋ 13×2 ＋ 8×2、各 10KB〜数百 KB）。公開レート制限なし（Eurostat は 1 リクエストあたりセル数上限あり → 国別分割）。再取得は年 1 回程度。
+- 既知の欠損・断絶・定義変更:
+  - センサスの配偶関係は法律婚＋登録パートナー（`MAR_REP`）のみで同棲を含まない（北欧の有配偶率を過小評価）。学歴 UNK/NAP は群に入れない。`total` は TOTAL − 配偶関係 UNK。
+  - `demo_fordagec` の出生順位 UNK は TFR の順位別分解に含めず別行（`order="UNK"`）で保持。母の年齢 UNK の出生は TFR から落とし `births_age_unknown` に件数を残す。
+  - `demo_faeduc` は国により 1 歳刻みと 5 歳階級の公開が異なる。mart では 5 歳階級セルが無ければ 1 歳刻み 5 本の合計を使う（5 本そろわなければ落とす）。
+  - `lfsa_pgaed` は標本（LFS）由来で小さいセルは非公表（`value` 欠落、`status: u/b`）。分母が無く出生 > 0 の階級がある年・学歴群は落とす（補完しない）。出生 0 の階級は分母が無くても寄与 0。
+  - 出生の 2024 年値は国により未公表。学歴別出生（`demo_faeduc`）は提供国が限られる（北欧以外は試行取得し、データがあれば残す）。
+### 国家データ処（韓国）— 신혼부부통계（新婚夫婦統計）報道資料 PDF（growth-fertility H5: 韓国の所得区間別 有子率）
+- URL / API:
+  - 掲示板: `https://mods.go.kr/board.es?mid=a10301010000&bid=11815`（報道資料。検索語「신혼부부」で各年の「<year>년 (기준) 신혼부부통계 결과」投稿を特定。2026-10-06 時点の `list_no`/`seq`（pdf 添付）は `theme_growth_fertility.kostat.RELEASES` に固定）:
+    | 基準年 | URL |
+    |---|---|
+    | 2015 | `https://mods.go.kr/boardDownload.es?bid=11815&list_no=358364&seq=5` |
+    | 2016 | `…list_no=365445&seq=15` |
+    | 2017 | `…list_no=371980&seq=2` |
+    | 2018 | `…list_no=379256&seq=10` |
+    | 2019 | `…list_no=386554&seq=2` |
+    | 2020 | `…list_no=415466&seq=2` |
+    | 2021 | `…list_no=422173&seq=1` |
+    | 2022 | `…list_no=428407&seq=3` |
+    | 2023 | `…list_no=434122&seq=3` |
+    | 2024 | `…list_no=442387&seq=3` |
+  - KOSIS OpenAPI はキー必須のため使わない。PDF は静的 URL、キー不要、各 1.5–3.7 MB。robots.txt（`https://mods.go.kr/robots.txt`、2026-10-06）: `User-agent: *` は `/ksows/wisenut/` のみ Disallow、Googlebot 向けに `/board.es?mid=b20306000000&bid=601` を Disallow。`boardDownload.es` と当該掲示板は許可。
+- 対象指標・粒度: 基準年 × 所得区間（전체 / 1천만원 미만 / 1천만~3천만 / 3천만~5천만 / 5천만~7천만 / 7천만~1억 / 1억원 이상。万ウォン単位の下限・上限に変換、上限なしは NULL）。値: 부부 수（쌍）, 자녀있음 %, 1명 %, 2명 %, 3명 이상 %, 평균 자녀 수。**母集団**: 基準年 11 月 1 日時点で婚姻 5 年以内・婚姻継続中・両者国内居住の**初婚**夫婦（`population = first_marriage_within_5y`）。**所得概念**: 夫婦合算の年間 근로＋사업소득（`income_concept = earned_business`）。**2015 年基準の断絶**: 2015 年基準報道資料は健康保険職場加入者の**賃金勤労者**夫婦（852,618 쌍）のみを所得区間別に集計 → `income_concept = wage_only`。2016 年基準資料が 2015 年を 근로＋사업소득 ベース（1,179,000 쌍）で再掲しているため、2015 年は両概念の行が存在する。各資料は前年も再掲するので、mart では (ref_year, income_concept) ごとに**最新の資料**を採用する。
+- ライセンス・利用規約（確認日 2026-10-06、`https://mods.go.kr/menu.es?mid=a10706000000` 저작권정책）: 報道資料は **공공누리（KOGL）제1유형（출처표시）**（`https://www.kogl.or.kr/info/license.do`）。出典表示のみで商用・改変可。出典表記: 「국가데이터처, 신혼부부통계（<year>년 기준）, 보도자료, mods.go.kr」。`kostat.LICENSE` に記載し manifest に残す。raw（PDF）はコミットしない。
+- 取得方法（adapter 名、レート制限）: `theme_growth_fertility.kostat`（`RELEASES`、`pdf_text`（pypdf）、`find_income_children_table`、`income_children_rows` の純粋変換）＋ `pipeline._fetch_kostat` / `_stage_kostat` / `_mart_kostat`（`HttpxFetcher`）。**10 リクエスト（計 ~22 MB）**。raw は `data/raw/growth-fertility/kostat_newlywed/newlywed_<ref_year>.pdf`、staged は `staged/kostat/newlywed_income_children`、mart は `marts/kr_newlywed_income_children`。公開レート制限なし。再取得は年 1 回（12 月の公表後）。
+- 既知の欠損・断絶・定義変更:
+  - 表のレイアウトは 3 系統（2015: 行＝所得区間・実数＋構成比、2016–2019: 行＝所得区間・構成比＋千쌍、2020–2024: 列＝所得区間・年ブロック）。`kostat.py` はこの 3 系統のみ解析し、見出し・行数・合計（区間の合計＝全体、자녀없음＋자녀있음＝100、1명＋2명＋3명 이상＝자녀있음）が合わないときは `ValueError` → stage の skipped に「`newlywed_<year>.pdf: layout not recognised (<reason>)`」として残す（補完しない）。
+  - 2016–2020 年基準資料の 부부 수 は**千쌍単位**（2016–2018 は小数 1 桁、2019–2020 は整数）→ ×1000 で쌍に換算。2021 年以降と 2015 年は実数。最新資料優先のため、mart で千쌍由来なのは 2015（earned_business）・2016・2017・2018 年の行のみ。
+  - 共稼ぎ（맞벌이）別・婚姻年次別の平均子ども数は資料にあるが未取込（任意項目）。所得は夫婦合算で、共稼ぎと所得が同時決定（`design/themes/growth-fertility.md` H5 の限界）。
+  - 2018 年基準 PDF は本文フォントが抽出で文字化けするが、表部分は正常に抽出される。
 
 ## 記録テンプレート（ソース採用時）
 ```
