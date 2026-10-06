@@ -78,6 +78,20 @@ def test_fetch_stores_raw_with_manifest_and_reports_failures() -> None:
     assert ctx.raw.get(theme="growth-fertility", source="worldbank_wdi", name="tfr.json") == FIXTURE
 
 
+def test_fetch_rejects_non_json_list_payloads_and_raises_when_all_bad() -> None:
+    html = b"<!DOCTYPE html><html><body>parked</body></html>"
+    assert wb.is_json_list_payload(FIXTURE) and wb.is_json_list_payload(COUNTRIES)
+    assert not wb.is_json_list_payload(html)
+    assert not wb.is_json_list_payload(b'{"message": [{"id": "120"}]}')
+    ctx = make_ctx({**all_responses(), wb.indicator_url(wb.INDICATORS["tfr"]): html})
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert "tfr: non-JSON-list payload (site down?)" in result.skipped
+    assert "growth-fertility/worldbank_wdi/tfr.json" not in result.written
+    assert ctx.raw.get(theme="growth-fertility", source="worldbank_wdi", name="tfr.json") is None
+    with pytest.raises(RuntimeError, match="worldbank_wdi: all"):
+        PIPELINE.run(Stage.FETCH, make_ctx(dict.fromkeys(all_responses(), html)))
+
+
 def test_fetch_also_stores_country_metadata() -> None:
     ctx = make_ctx(all_responses())
     result = PIPELINE.run(Stage.FETCH, ctx)

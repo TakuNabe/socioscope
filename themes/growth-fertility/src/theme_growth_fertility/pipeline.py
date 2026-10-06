@@ -72,11 +72,17 @@ def _sources() -> dict[str, str]:
 def fetch(ctx: Context) -> StageResult:
     written: list[str] = []
     skipped: list[str] = []
+    fetched = rejected = 0
     for key, url in _sources().items():
         try:
             payload = ctx.fetcher.fetch(url)
         except FetchError as e:
             skipped.append(f"{key}: {e}")
+            continue
+        fetched += 1
+        if not wb.is_json_list_payload(payload):
+            rejected += 1
+            skipped.append(f"{key}: non-JSON-list payload (site down?)")
             continue
         rec = ctx.raw.put(
             theme=THEME,
@@ -87,6 +93,9 @@ def fetch(ctx: Context) -> StageResult:
             payload=payload,
         )
         written.append(rec.relative_path)
+    if fetched and rejected == fetched:
+        msg = f"{wb.SOURCE}: all {fetched} fetched payloads were rejected (site down?)"
+        raise RuntimeError(msg)
     for table in estat.TABLES:
         url = table.url
         try:

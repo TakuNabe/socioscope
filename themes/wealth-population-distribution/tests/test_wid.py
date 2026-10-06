@@ -35,6 +35,15 @@ def test_iso2_to_iso3_mapping_is_committed_and_drops_non_countries() -> None:
         assert wid.iso2_to_iso3(code) is None
 
 
+def test_is_zip_payload_checks_magic_bytes() -> None:
+    assert wid.is_zip_payload(make_zip({"WID_data_JP.csv": FIXTURE}))
+    html = (
+        b'<!DOCTYPE html><html><head><script>window.location.href="/lander"</script></head></html>'
+    )
+    assert not wid.is_zip_payload(html)
+    assert not wid.is_zip_payload(b"") and not wid.is_zip_payload(b"PK\x05\x06")
+
+
 def test_extract_data_csv_from_country_zip() -> None:
     payload = make_zip({"WID_data_JP.csv": FIXTURE, "README.md": b"x", "WID_metadata_JP.csv": b"y"})
     assert wid.extract_data_csv(payload, "JP") == FIXTURE
@@ -298,3 +307,58 @@ def test_data_point_rows_without_metadata_row_are_unknown() -> None:
     points = wid.data_point_rows(shares, [])
     assert {p["is_observed"] for p in points} == {None}
     assert len(points) == 3  # (JPN, shweal992j, 2000), (JPN, sptinc992j, 2000), (…, 2001)
+
+
+# ---------------------------------------------------------------- distribution / thresholds (H4)
+def test_distribution_rows_keep_g_percentiles_and_top_tails_with_bounds() -> None:
+    dist, thresholds = wid.distribution_rows_from_csv(FIXTURE)
+    assert [
+        (r["variable"], r["percentile"], r["p_lower"], r["p_upper"], r["share"]) for r in dist
+    ] == [
+        ("sptinc992j", "p0p1", 0.0, 1.0, -0.001),
+        ("sptinc992j", "p99.9p100", 99.9, 100.0, 0.03),
+        ("sptinc992j", "p99.99p100", 99.99, 100.0, 0.008),
+        ("sptinc992j", "p99.999p100", 99.999, 100.0, 0.004),
+    ]
+    assert dist[0] == {
+        "iso3": "JPN",
+        "year": 2000,
+        "variable": "sptinc992j",
+        "percentile": "p0p1",
+        "p_lower": 0.0,
+        "p_upper": 1.0,
+        "share": -0.001,
+        "data_quality": 1,
+        "source": "wid_world",
+    }
+    # p0p50 / p90p100 / p0p90 (neither g-percentiles nor the two top tails) stay out of this table
+    assert [(r["variable"], r["percentile"], r["value"]) for r in thresholds] == [
+        ("thweal992j", 50, 12000000.0),
+        ("tptinc992j", 10, 900000.0),
+        ("tptinc992j", 50, 3000000.0),
+        ("tptinc992j", 90, 7500000.0),
+        ("tptinc992j", 99, 21000000.0),
+    ]
+    assert thresholds[1] == {
+        "iso3": "JPN",
+        "year": 2000,
+        "variable": "tptinc992j",
+        "percentile": 10,
+        "percentile_code": "p10p11",
+        "value": 900000.0,
+        "unit": "local currency, constant prices",
+        "data_quality": 1,
+        "source": "wid_world",
+    }
+
+
+def test_distribution_rows_fail_closed_on_bad_header_and_are_deterministic() -> None:
+    with pytest.raises(ValueError, match="header"):
+        wid.distribution_rows_from_csv(b"a,b\n1,2\n")
+    assert wid.distribution_rows_from_csv(FIXTURE) == wid.distribution_rows_from_csv(FIXTURE)
+
+
+def test_existing_rows_from_csv_is_unchanged_by_new_fixture_rows() -> None:
+    shares, population = wid.rows_from_csv(FIXTURE)
+    assert len(shares) == 7 and len(population) == 2
+    assert not any(r["percentile"] in {"p99.9p100", "p99.99p100", "p0p1"} for r in shares)

@@ -94,6 +94,20 @@ def test_median_by_year_ignores_missing() -> None:
     assert m["n"].to_list() == [3, 2]
 
 
+def test_ratio_series_drops_missing_and_nonpositive_denominators() -> None:
+    p = panel().with_columns(
+        pl.Series("top01_income_share", [0.03, None, 0.09, 0.1, 0.05, 0.06]),
+        pl.Series("top1_income_share", [0.10, 0.12, 0.30, None, 0.0, 0.22]),
+    )
+    r = s.ratio_series(p, "top01_income_share", "top1_income_share")
+    assert [(x["iso3"], x["year"]) for x in r.iter_rows(named=True)] == [
+        ("AAA", 1980),
+        ("BBB", 1980),
+        ("CCC", 1981),
+    ]
+    assert r["ratio"].to_list() == pytest.approx([0.3, 0.3, 0.06 / 0.22])
+
+
 def test_rank_series_only_years_with_full_panel() -> None:
     rs = s.rank_series(panel(), "top1_income_share", "AAA", (1980, 1981), full_n=3)
     assert rs == [(1980, 3)]  # 1981 has only 2 countries

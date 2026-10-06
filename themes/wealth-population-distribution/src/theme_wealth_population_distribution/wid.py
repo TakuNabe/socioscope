@@ -29,6 +29,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from theme_wealth_population_distribution.distribution import g_percentiles, parse_percentile
+
 BASE = "https://wid.world/bulk_download"
 LICENSE = (
     "CC BY-NC-SA 4.0 (rel=license link on wid.world, checked 2026-10-04; "
@@ -59,6 +61,18 @@ _ISO2 = re.compile(r"^[A-Z]{2}$")
 
 def country_zip_url(iso2: str) -> str:
     return f"{BASE}/WID_fulldataset_{iso2}.zip"
+
+
+ZIP_MAGIC = b"PK\x03\x04"
+
+
+def is_zip_payload(payload: bytes) -> bool:
+    """True when the bytes start with the local-file-header magic of a zip archive.
+
+    wid.world served a 114-byte HTML parking page with HTTP 200 on 2026-10-05; the fetch must
+    not store such a body as a zip nor record it in the manifest (fail closed).
+    """
+    return payload.startswith(ZIP_MAGIC)
 
 
 @cache
@@ -160,6 +174,107 @@ def rows_from_csv(payload: bytes) -> tuple[list[dict[str, object]], list[dict[st
     )
     population.sort(key=lambda r: (str(r["iso3"]), int(str(r["year"]))))
     return shares, population
+
+
+# ---------------------------------------------------------------- distribution / thresholds (H4)
+# Top-tail shares beyond p99p100 (kept alongside the g-percentiles in staged/wid/distribution).
+TOP_TAIL_PERCENTILES: frozenset[str] = frozenset({"p99.9p100", "p99.99p100"})
+G_PERCENTILES: frozenset[str] = frozenset(g_percentiles())  # 127 consecutive brackets
+DISTRIBUTION_PERCENTILES: frozenset[str] = G_PERCENTILES | TOP_TAIL_PERCENTILES
+# threshold variable (canonical code) -> the share variable it belongs to
+THRESHOLD_VARIABLES: dict[str, str] = {
+    "tptinc992j": "sptinc992j",  # pre-tax national income threshold, adults, equal-split
+    "thweal992j": "shweal992j",  # net personal wealth threshold, adults, equal-split
+}
+# WID reports the threshold of a g-percentile bracket pXpY as the value at X (its lower bound).
+THRESHOLD_PERCENTILES: dict[str, int] = {
+    "p10p11": 10,
+    "p50p51": 50,
+    "p90p91": 90,
+    "p99p99.1": 99,
+}
+THRESHOLD_UNIT = "local currency, constant prices"  # WID bulk `t*` variables (see metadata unit)
+
+
+def distribution_rows_from_csv(
+    payload: bytes,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """(distribution rows, threshold rows) for one WID_data_XX.csv. Country-level only; sorted.
+
+    distribution: the 127 g-percentile brackets plus p99.9p100 / p99.99p100 of the two share
+    variables, with numeric bounds so a Lorenz curve can be built from the partition.
+    thresholds: `tptinc992j` / `thweal992j` at p10, p50, p90, p99 (THRESHOLD_PERCENTILES).
+    The existing rows_from_csv output is untouched by this function.
+    """
+    reader = csv.DictReader(io.StringIO(payload.decode("utf-8")), delimiter=";")
+    if reader.fieldnames is None or list(reader.fieldnames)[:7] != EXPECTED_HEADER:
+        msg = f"unexpected WID header: {reader.fieldnames}"
+        raise ValueError(msg)
+    dist: list[dict[str, object]] = []
+    thresholds: list[dict[str, object]] = []
+    for raw in reader:
+        if None in raw or any(v is None for v in raw.values()):
+            msg = f"ragged WID row: {raw}"
+            raise ValueError(msg)
+        line = _Line.model_validate(raw)
+        code = canonical_code(line.variable, line.age, line.pop)
+        is_dist = code in SHARE_VARIABLES and line.percentile in DISTRIBUTION_PERCENTILES
+        is_thr = code in THRESHOLD_VARIABLES and line.percentile in THRESHOLD_PERCENTILES
+        if not (is_dist or is_thr):
+            continue
+        iso3 = iso2_to_iso3(line.country)
+        if iso3 is None:
+            continue
+        if is_dist:
+            bounds = parse_percentile(line.percentile)
+            if bounds is None:  # unreachable for the whitelisted codes; keep fail-closed
+                msg = f"unparseable percentile {line.percentile!r}"
+                raise ValueError(msg)
+            dist.append(
+                {
+                    "iso3": iso3,
+                    "year": line.year,
+                    "variable": code,
+                    "percentile": line.percentile,
+                    "p_lower": bounds[0],
+                    "p_upper": bounds[1],
+                    "share": line.value,
+                    "data_quality": line.data_quality,
+                    "source": SOURCE,
+                }
+            )
+        else:
+            thresholds.append(
+                {
+                    "iso3": iso3,
+                    "year": line.year,
+                    "variable": code,
+                    "percentile": THRESHOLD_PERCENTILES[line.percentile],
+                    "percentile_code": line.percentile,
+                    "value": line.value,
+                    "unit": THRESHOLD_UNIT,
+                    "data_quality": line.data_quality,
+                    "source": SOURCE,
+                }
+            )
+    dist.sort(
+        key=lambda r: (
+            str(r["iso3"]),
+            str(r["variable"]),
+            int(str(r["year"])),
+            float(str(r["p_lower"])),
+            float(str(r["p_upper"])),
+        )
+    )
+    thresholds.sort(
+        key=lambda r: (
+            str(r["iso3"]),
+            str(r["variable"]),
+            int(str(r["year"])),
+            int(str(r["percentile"])),
+        )
+    )
+    return dist, thresholds
 
 
 # ---------------------------------------------------------------- metadata (WID_metadata_XX.csv)

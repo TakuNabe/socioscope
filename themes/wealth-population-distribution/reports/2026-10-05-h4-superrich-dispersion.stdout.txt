@@ -1,0 +1,298 @@
+== inputs ==
+mart rows=10396 countries=46 staged top_shares rows=25040 distribution rows=807413
+== coverage (window 1950-2024): income ==
+  top1      top1_income_share: country-years=2696 countries=46 years=1950-2024
+  top01     top01_income_share: country-years=2696 countries=46 years=1950-2024
+  top001    top001_income_share: country-years=2696 countries=46 years=1950-2024
+  top10     top10_income_share: country-years=2696 countries=46 years=1950-2024
+  bottom50  bottom50_income_share: country-years=2696 countries=46 years=1950-2024
+  middle40  middle40_income_share: country-years=2696 countries=46 years=1950-2024
+  gini      gini_income: country-years=2696 countries=46 years=1950-2024
+  p90_p50   p90_p50_income: country-years=2696 countries=46 years=1950-2024
+  p50_p10   p50_p10_income: country-years=2696 countries=46 years=1950-2024
+== coverage (window 1950-2024): wealth ==
+  top1      top1_wealth_share: country-years=2281 countries=46 years=1950-2024
+  top01     top01_wealth_share: country-years=2281 countries=46 years=1950-2024
+  top001    top001_wealth_share: country-years=2281 countries=46 years=1950-2024
+  top10     top10_wealth_share: country-years=2281 countries=46 years=1950-2024
+  middle40  middle40_wealth_share: country-years=2281 countries=46 years=1950-2024
+  gini      gini_wealth: country-years=2281 countries=46 years=1950-2024
+  p90_p50   p90_p50_wealth: country-years=2278 countries=46 years=1950-2024
+  p50_p10   p50_p10_wealth: country-years=853 countries=29 years=1950-2024
+  check middle40_income_share vs WID p50p90: n=3544 max|diff|=1.00e-04
+  check middle40_wealth_share vs WID p50p90: n=2715 max|diff|=1.00e-04
+
+== H4a (income): within-top concentration ==
+  [a3] Δtop1>0: 37 countries; Δtop0.1 >= 0.5×Δtop1: 18/37 share=0.486 wilson95=[0.334, 0.641] p(one-sided, H0 p=0.5)=0.6286
+    concentrated: ARG CAN CHE CHN DNK ESP EST FRA GBR GRC IRL ISL KOR MEX NZL POL SVK USA
+    rising but diffuse: AUS BEL CZE DEU FIN HUN IDN IND ITA JPN LTU LVA NLD NOR PRT RUS SVN SWE ZAF
+    Δtop1 <= 0 (criterion n/a, 9): AUT BRA CHL COL CRI ISR LUX SAU TUR
+  [a2] Δ(top0.1/top1) > 0: 35/46 share=0.761 wilson95=[0.621, 0.861]; median Δ(top0.1/top1)=+0.0690
+  iso3  year0  ratio0 year1  ratio1  d_ratio
+  ARG    1980   0.349  2024   0.412  +0.0630
+  AUS    1980   0.258  2024   0.317  +0.0591
+  AUT    1980   0.300  2024   0.280  -0.0201
+  BEL    1980   0.263  2024   0.264  +0.0000
+  BRA    1980   0.470  2024   0.437  -0.0322
+  CAN    1980   0.217  2024   0.377  +0.1602
+  CHE    1980   0.375  2024   0.398  +0.0225
+  CHL    1980   0.462  2024   0.511  +0.0482
+  CHN    1980   0.362  2024   0.500  +0.1384
+  COL    1980   0.417  2024   0.442  +0.0257
+  CRI    1980   0.216  2024   0.203  -0.0130
+  CZE    1980   0.133  2024   0.397  +0.2644
+  DEU    1980   0.547  2024   0.370  -0.1763
+  DNK    1980   0.342  2024   0.452  +0.1097
+  ESP    1980   0.349  2024   0.397  +0.0483
+  EST    1980   0.203  2024   0.470  +0.2674
+  FIN    1980   0.303  2024   0.356  +0.0537
+  FRA    1980   0.320  2024   0.399  +0.0797
+  GBR    1980   0.263  2024   0.384  +0.1213
+  GRC    1980   0.263  2024   0.377  +0.1141
+  HUN    1980   0.146  2024   0.333  +0.1870
+  IDN    1980   0.335  2024   0.352  +0.0165
+  IND    1980   0.272  2024   0.424  +0.1520
+  IRL    1980   0.298  2024   0.373  +0.0751
+  ISL    1980   0.268  2024   0.317  +0.0492
+  ISR    1980   0.312  2024   0.293  -0.0186
+  ITA    1980   0.222  2024   0.299  +0.0771
+  JPN    1980   0.215  2024   0.153  -0.0619
+  KOR    1980   0.216  2024   0.473  +0.2567
+  LTU    1980   0.180  2024   0.305  +0.1246
+  LUX    1980   0.413  2024   0.331  -0.0816
+  LVA    1980   0.162  2024   0.250  +0.0876
+  MEX    1980   0.217  2024   0.449  +0.2325
+  NLD    1980   0.226  2024   0.224  -0.0012
+  NOR    1980   0.346  2024   0.363  +0.0174
+  NZL    1980   0.210  2024   0.387  +0.1767
+  POL    1980   0.198  2024   0.459  +0.2605
+  PRT    1980   0.309  2024   0.297  -0.0121
+  RUS    1980   0.148  2024   0.414  +0.2659
+  SAU    1980   0.379  2024   0.379  +0.0000
+  SVK    1980   0.200  2024   0.348  +0.1479
+  SVN    1980   0.188  2024   0.288  +0.0999
+  SWE    1980   0.350  2024   0.386  +0.0359
+  TUR    1980   0.352  2024   0.282  -0.0701
+  USA    1980   0.329  2024   0.479  +0.1498
+  ZAF    1980   0.190  2024   0.277  +0.0869
+  [a4] JPN Δtop1=+2.15pp Δtop0.1=-0.32pp top0.1/top1 1980=0.215 -> 2024=0.153 Δ=-0.0619 rank=43/46 (1 = largest rise) median(others)=+0.0751 -> JPN weaker than median: True; meets a3 criterion: False
+  [a1] Δtop0.01 > 0: 36/46
+
+== H4a (wealth): within-top concentration ==
+  [a3] Δtop1>0: 35 countries; Δtop0.1 >= 0.5×Δtop1: 30/35 share=0.857 wilson95=[0.706, 0.937] p(one-sided, H0 p=0.5)=0.0000
+    concentrated: AUS AUT BRA CAN CHE CHN CZE DNK FIN FRA GBR HUN IDN IND ISL ISR ITA JPN KOR LTU LUX LVA MEX NZL POL RUS SVN SWE USA ZAF
+    rising but diffuse: DEU EST GRC PRT SVK
+    Δtop1 <= 0 (criterion n/a, 11): ARG BEL CHL COL CRI ESP IRL NLD NOR SAU TUR
+  [a2] Δ(top0.1/top1) > 0: 37/46 share=0.804 wilson95=[0.668, 0.893]; median Δ(top0.1/top1)=+0.0729
+  iso3  year0  ratio0 year1  ratio1  d_ratio
+  ARG    1980   0.464  2024   0.436  -0.0276
+  AUS    1980   0.382  2024   0.423  +0.0417
+  AUT    1980   0.230  2024   0.484  +0.2532
+  BEL    1980   0.239  2024   0.265  +0.0264
+  BRA    1980   0.533  2024   0.544  +0.0110
+  CAN    1980   0.447  2024   0.518  +0.0708
+  CHE    1980   0.385  2024   0.520  +0.1356
+  CHL    1980   0.538  2024   0.544  +0.0059
+  CHN    1980   0.447  2024   0.561  +0.1146
+  COL    1980   0.539  2024   0.535  -0.0035
+  CRI    1980   0.473  2024   0.456  -0.0170
+  CZE    1980   0.381  2024   0.519  +0.1386
+  DEU    1980   0.648  2024   0.479  -0.1683
+  DNK    1980   0.345  2024   0.511  +0.1655
+  ESP    1980   0.297  2024   0.421  +0.1238
+  EST    1980   0.406  2024   0.416  +0.0108
+  FIN    1980   0.204  2024   0.340  +0.1354
+  FRA    1980   0.340  2024   0.482  +0.1418
+  GBR    1980   0.248  2024   0.325  +0.0770
+  GRC    1980   0.240  2024   0.340  +0.1006
+  HUN    1980   0.324  2024   0.505  +0.1813
+  IDN    1980   0.271  2024   0.390  +0.1189
+  IND    1980   0.215  2024   0.740  +0.5244
+  IRL    1980   0.329  2024   0.331  +0.0027
+  ISL    1980   0.324  2024   0.364  +0.0401
+  ISR    1980   0.447  2024   0.522  +0.0750
+  ITA    1980   0.336  2024   0.418  +0.0816
+  JPN    1980   0.390  2024   0.414  +0.0244
+  KOR    1980   0.165  2024   0.254  +0.0892
+  LTU    1980   0.382  2024   0.409  +0.0273
+  LUX    1980   0.283  2024   0.624  +0.3410
+  LVA    1980   0.241  2024   0.434  +0.1930
+  MEX    1980   0.497  2024   0.551  +0.0543
+  NLD    1980   0.400  2024   0.318  -0.0822
+  NOR    1980   0.645  2024   0.523  -0.1222
+  NZL    1980   0.385  2024   0.394  +0.0082
+  POL    1980   0.473  2024   0.507  +0.0339
+  PRT    1980   0.408  2024   0.376  -0.0313
+  RUS    1980   0.411  2024   0.657  +0.2465
+  SAU    1980   0.471  2024   0.470  -0.0005
+  SVK    1980   0.227  2024   0.293  +0.0660
+  SVN    1980   0.290  2024   0.528  +0.2373
+  SWE    1980   0.378  2024   0.504  +0.1258
+  TUR    1980   0.535  2024   0.485  -0.0498
+  USA    1980   0.335  2024   0.528  +0.1936
+  ZAF    1980   0.397  2024   0.545  +0.1486
+  [a4] JPN Δtop1=+1.95pp Δtop0.1=+1.36pp top0.1/top1 1980=0.390 -> 2024=0.414 Δ=+0.0244 rank=32/46 (1 = largest rise) median(others)=+0.0750 -> JPN weaker than median: True; meets a3 criterion: True
+  [a1] Δtop0.01 > 0: 37/46
+
+== H4a (wealth) sensitivity: null-out data_quality <= 1 (H1c V-A direction) ==
+
+== H4a (wealth_q>1): within-top concentration ==
+  [a3] Δtop1>0: 22 countries; Δtop0.1 >= 0.5×Δtop1: 18/22 share=0.818 wilson95=[0.615, 0.927] p(one-sided, H0 p=0.5)=0.0022
+    concentrated: AUT CHE CHN DNK FIN FRA GBR HUN IND ITA KOR LUX LVA POL SVN SWE USA ZAF
+    rising but diffuse: DEU GRC PRT SVK
+    Δtop1 <= 0 (criterion n/a, 6): BEL ESP IRL ISL NLD NOR
+  [a2] Δ(top0.1/top1) > 0: 22/28 share=0.786 wilson95=[0.605, 0.898]; median Δ(top0.1/top1)=+0.0976
+  iso3  year0  ratio0 year1  ratio1  d_ratio
+  AUT    2010   0.267  2017   0.457  +0.1891
+  BEL    2010   0.252  2017   0.222  -0.0304
+  CHE    1981   0.385  2017   0.521  +0.1359
+  CHN    1995   0.453  2015   0.553  +0.0999
+  DEU    1980   0.648  2013   0.532  -0.1154
+  DNK    1980   0.345  2012   0.477  +0.1316
+  ESP    1984   0.297  2015   0.420  +0.1223
+  FIN    1995   0.205  2017   0.355  +0.1497
+  FRA    1980   0.340  2014   0.435  +0.0953
+  GBR    1980   0.248  2018   0.327  +0.0789
+  GRC    2009   0.271  2017   0.298  +0.0266
+  HUN    2014   0.327  2017   0.505  +0.1783
+  IND    2002   0.594  2022   0.740  +0.1455
+  IRL    2013   0.429  2018   0.357  -0.0724
+  ISL    2010   0.353  2017   0.377  +0.0244
+  ITA    1995   0.337  2016   0.417  +0.0807
+  KOR    2000   0.171  2013   0.264  +0.0933
+  LUX    2010   0.286  2018   0.635  +0.3494
+  LVA    2014   0.247  2017   0.437  +0.1900
+  NLD    1980   0.400  2019   0.311  -0.0889
+  NOR    2010   0.649  2017   0.638  -0.0115
+  POL    2014   0.492  2016   0.507  +0.0149
+  PRT    2010   0.422  2017   0.399  -0.0237
+  SVK    2010   0.229  2017   0.273  +0.0440
+  SVN    2010   0.292  2017   0.528  +0.2362
+  SWE    1978   0.307  2012   0.480  +0.1723
+  USA    1980   0.335  2022   0.529  +0.1945
+  ZAF    1993   0.392  2017   0.544  +0.1515
+  [a4] JPN: not enough data
+  [a1] Δtop0.01 > 0: 24/28
+
+== H4b (income): dispersion across the whole distribution ==
+== H4b income: change 1980 (nearest) -> latest, per country (pp unless ratio) ==
+  iso3       top1     top01    top001     top10  bottom50  middle40      gini   p90_p50   p50_p10
+  ARG      +3.24p    +2.27p    -0.19p    -5.46p    +4.04p    +1.42p    -0.066    -1.174  -530.670
+  AUS      +5.48p    +2.06p    +0.57p   +10.31p    -2.44p    -7.87p    +0.073    +0.348    -1.005
+  AUT      -0.57p    -0.35p    -0.14p    +0.15p    +0.01p    -0.16p    +0.001    +0.081    -0.200
+  BEL      +0.34p    +0.09p    +0.02p    +1.27p    -2.17p    +0.90p    +0.029    +0.035    +0.815
+  BRA      -0.74p    -1.20p    -2.48p    +0.51p    +0.14p    -0.65p    +0.002    -0.554  +831.789
+  CAN      +4.46p    +2.90p    +1.27p    +6.75p    -5.05p    -1.70p    +0.085    +0.492    +1.987
+  CHE      +0.26p    +0.33p    +0.27p    +0.96p    -0.69p    -0.27p    +0.012    +0.179    +0.069
+  CHL      -3.52p    -0.34p    +0.30p    -3.26p    +0.66p    +2.60p    -0.022    -0.393  -453.220
+  CHN      +9.15p    +5.49p    +3.47p   +15.41p   -11.03p    -4.38p    +0.183    +1.524    +1.813
+  COL      -6.38p    -2.08p    +1.96p    -4.03p    +0.26p    +3.77p    -0.017    +1.678  -710.989
+  CRI      -2.01p    -0.67p    -0.06p    -2.03p    -0.79p    +2.82p    -0.002    -0.191  -651.046
+  CZE      +7.56p    +3.68p    +1.69p   +10.94p    -5.61p    -5.33p    +0.104    +0.266    -0.347
+  DEU      +3.47p    -0.45p    -1.62p    +9.05p    -4.48p    -4.57p    +0.087    +0.316    +0.786
+  DNK      +5.52p    +3.25p    +1.78p    +7.28p    -3.44p    -3.84p    +0.070    +0.212    +0.023
+  ESP      +0.76p    +0.85p    +0.49p    -0.96p    +1.05p    -0.09p    -0.016    -0.362    +0.124
+  EST     +12.39p    +7.08p    +3.60p   +17.67p    -8.30p    -9.37p    +0.169    +1.046    -0.569
+  FIN      +3.02p    +1.42p    +0.57p    +3.50p    -0.85p    -2.65p    +0.024    -0.058    -0.288
+  FRA      +4.28p    +2.31p    +1.05p    +5.27p    -2.36p    -2.91p    +0.050    +0.092    +0.613
+  GBR      +6.30p    +3.24p    +1.44p    +7.74p    -2.14p    -5.60p    +0.058    +0.161    -0.362
+  GRC      +1.43p    +1.67p    +0.99p    -2.99p    +3.10p    -0.11p    -0.041    -0.584    +2.097
+  HUN      +8.65p    +3.42p    +1.26p   +15.06p   -11.17p    -3.89p    +0.183    +0.549    +1.421
+  IDN      +3.06p    +1.32p    +0.47p    +5.62p    -4.01p    -1.61p    +0.068    +0.767    +0.846
+  IND     +15.53p    +7.73p    +3.85p   +26.53p    -7.96p   -18.57p    +0.199    +0.073    -0.263
+  IRL      +3.92p    +2.14p    +1.01p    +5.74p    -3.50p    -2.24p    +0.066    +0.461    +0.127
+  ISL      +0.29p    +0.47p    +0.28p    -1.97p    +3.44p    -1.47p    -0.045    -0.331    -0.854
+  ISR      -1.30p    -0.72p    -0.28p    -0.29p    -0.16p    +0.45p    +0.000    -0.009    +0.727
+  ITA      +4.14p    +1.62p    +0.51p    +8.35p    -4.79p    -3.56p    +0.089    +0.353    +1.024
+  JPN      +2.15p    -0.32p    -0.19p    +8.14p    -2.38p    -5.76p    +0.061    +0.157    -0.076
+  KOR      +6.47p    +5.02p    +3.45p    +5.52p    -4.75p    -0.77p    +0.076    +0.186    +1.836
+  LTU      +4.56p    +1.95p    +0.70p   +10.71p    -8.07p    -2.64p    +0.131    +1.776    -0.912
+  LUX      -2.75p    -1.97p    -1.12p    -2.64p    -1.02p    +3.66p    -0.004    -0.181    +1.877
+  LVA      +5.63p    +1.73p    +0.46p   +13.03p    -8.84p    -4.19p    +0.151    +0.950    +1.005
+  MEX     +13.12p    +8.79p    +5.90p    +4.62p    +1.40p    -6.02p    +0.012    -2.271  +217.495
+  NLD      +0.88p    +0.19p    +0.05p    +3.09p    -5.11p    +2.02p    +0.065    +0.468    +1.087
+  NOR      +1.92p    +0.83p    +0.29p    +3.34p    -1.12p    -2.22p    +0.028    +0.225    -0.312
+  NZL      +4.36p    +3.05p    +1.57p    +2.32p    +5.32p    -7.64p    -0.047    -1.370    -1.388
+  POL     +10.79p    +6.08p    +3.10p   +15.24p    -8.63p    -6.61p    +0.162    +0.723    +1.016
+  PRT      +3.48p    +0.95p    +0.20p    +7.19p    -2.14p    -5.05p    +0.058    +0.157    +0.278
+  RUS     +19.70p    +9.23p    +3.73p   +26.04p   -12.03p   -14.01p    +0.246    +0.661    +0.644
+  SAU      +0.00p    +0.00p    +0.00p    +0.00p    +0.00p    +0.00p    +0.000    -0.000    -0.000
+  SVK      +3.28p    +1.77p    +0.80p    +3.87p    -1.74p    -2.13p    +0.036    +0.121    +0.106
+  SVN      +3.70p    +1.49p    +0.52p    +7.29p    -4.34p    -2.95p    +0.080    +0.536    -0.030
+  SWE      +2.31p    +1.15p    +0.54p    +3.38p    -2.17p    -1.21p    +0.038    +0.091    +0.414
+  TUR      -6.62p    -3.85p    -1.73p    -5.88p    +2.79p    +3.09p    -0.058    -0.548    -0.013
+  USA     +10.31p    +6.50p    +3.56p   +12.92p    -6.64p    -6.28p    +0.133    +0.919    +1.743
+  ZAF     +11.79p    +4.15p    +1.31p   +19.36p    -8.23p   -11.13p    +0.177    +3.499    +3.300
+  n=46 countries with both endpoints for at least one listed series
+  top1      rose in 37/46; median(others)=+0.0348; JPN=+0.0215 rank=30/46 (1 = largest increase)
+  top01     rose in 35/46; median(others)=+0.0167; JPN=-0.0032 rank=37/46 (1 = largest increase)
+  top001    rose in 36/46; median(others)=+0.0057; JPN=-0.0019 rank=41/46 (1 = largest increase)
+  top10     rose in 35/46; median(others)=+0.0527; JPN=+0.0814 rank=15/46 (1 = largest increase)
+  bottom50  rose in 11/46; median(others)=-0.0217; JPN=-0.0238 rank=25/46 (1 = largest increase)
+  middle40  rose in 9/46; median(others)=-0.0224; JPN=-0.0576 rank=37/46 (1 = largest increase)
+  gini      rose in 35/46; median(others)=+0.0575; JPN=+0.0606 rank=22/46 (1 = largest increase)
+  p90_p50   rose in 32/46; median(others)=+0.1785; JPN=+0.1569 rank=26/46 (1 = largest increase)
+  p50_p10   rose in 27/46; median(others)=+0.1268; JPN=-0.0763 rank=31/46 (1 = largest increase)
+  [b2] Δtop10 = Δtop1 + Δp90p99: Δp90p99 > Δtop1 in 17/46; median Δtop1=+3.47pp median Δp90p99=+1.60pp
+  [b3] pattern (Δtop10 > Δtop1 and Δbottom50 < 0): 32/46 share=0.696 wilson95=[0.552, 0.809]; JPN meets it: True
+    countries: AUS BEL CAN CHE CHN CZE DEU DNK EST FIN FRA GBR HUN IDN IND IRL ISR ITA JPN LTU LUX LVA NLD NOR POL PRT RUS SVK SVN SWE USA ZAF
+  [b2 JPN] Δtop10=+8.14pp = Δtop1 +2.15pp + Δp90p99 +5.99pp
+  [b5] WID Gini is a trapezoid approximation over 127 g-percentile brackets; comparison with official (World Bank / survey) Gini is a future task.
+  [b6, post-hoc/exploratory] P50/P10 with ratios > 20.0 nulled (WID P10 thresholds near zero make the ratio meaningless):
+    n=42 (dropped: CHL COL CRI MEX); rose in 27/42; median(others)=+0.4136; JPN=-0.0763 rank=31/42
+
+== H4b (wealth, descriptive). P50/P10 omitted: WID wealth P10 is <= 0 in most country-years (negative net wealth), P90/P50 kept but P50 can be near zero ==
+== H4b wealth: change 1980 (nearest) -> latest, per country (pp unless ratio) ==
+  iso3       top1     top10  middle40      gini   p90_p50
+  ARG      -3.60p    -3.50p    +2.85p    -0.024    -0.465
+  AUS      +2.00p    +1.68p    -1.45p    +0.010    +0.061
+  AUT      +7.84p    +1.01p    -2.95p    -0.020    -0.192
+  BEL      -2.18p    +0.10p    +0.55p    +0.004    +0.328
+  BRA      +0.76p    +0.44p    -0.37p    +0.003    +0.050
+  CAN      +5.00p    +4.21p    -2.71p    +0.036    +0.024
+  CHE      +9.18p    +8.16p    -6.74p    +0.055    +0.924
+  CHL      -0.19p    -0.35p    +0.21p    -0.004    -0.145
+  CHN     +14.62p   +27.24p   -17.55p    +0.223    +2.471
+  COL      -0.71p    -0.60p    +0.44p    -0.005    -0.529
+  CRI      -1.76p    -1.53p    +1.23p    -0.011    -0.210
+  CZE      +4.78p    +2.79p    -2.46p    +0.017    +0.007
+  DEU      +0.89p    -3.74p    +5.06p    -0.006    -2.070
+  DNK      +7.17p    +6.08p    -4.71p    +0.046    +1.296
+  ESP      -0.37p    -7.34p    +5.29p    -0.053    -1.089
+  EST      +5.97p    +3.60p    -3.84p    +0.013    -0.027
+  FIN      +4.04p    +2.68p    -1.84p    +0.020    +0.642
+  FRA     +10.51p    +8.33p    -4.72p    +0.082    +1.028
+  GBR      +0.16p    -1.12p    +7.76p    +0.081    +2.452
+  GRC     +10.59p   +12.16p    -4.74p    +0.160    +0.708
+  HUN      +9.36p    +8.26p    -7.36p    +0.048    +0.054
+  IDN      +1.53p    +2.02p    +0.62p    +0.041    +1.842
+  IND     +27.60p   +19.94p   -15.46p    +0.150    +1.008
+  IRL      -0.10p    -2.37p    +3.28p    +0.006    -3.835
+  ISL      +0.96p    +0.62p    -2.64p    -0.024    +1.326
+  ISR      +3.02p    +1.58p    -1.41p    +0.010    -0.001
+  ITA      +5.78p   +11.55p    -3.85p    +0.137    +1.794
+  JPN      +1.95p    +1.96p    -1.64p    +0.013    +0.168
+  KOR      +3.77p    +2.11p    -1.25p    +0.006    +7.998
+  LTU      +2.71p    +2.92p    -2.46p    +0.019    +0.218
+  LUX      +2.74p    -2.59p    +2.40p    -0.013    -0.301
+  LVA      +3.81p    -3.07p    +0.21p    -0.050    -2.254
+  MEX      +6.66p    +5.28p    -4.13p    +0.040    +0.758
+  NLD     -10.93p   -13.57p    +8.13p    -0.120    -2.253
+  NOR      -0.19p    +2.01p    -3.22p    -0.010    +0.297
+  NZL      +0.48p    +0.45p    -0.39p    +0.003    +0.023
+  POL      +6.84p    +2.49p    -2.59p    +0.013    -0.986
+  PRT      +2.70p    +3.00p    -1.82p    +0.029    +0.882
+  RUS     +29.84p   +26.06p   -19.85p    +0.192    +1.866
+  SAU      -0.05p    -0.05p    +0.04p    -0.000    +0.059
+  SVK      +4.69p    +7.73p    -1.80p    +0.106    +0.603
+  SVN     +11.21p    +9.42p    -7.44p    +0.071    +0.040
+  SWE      +9.81p   +13.75p   +10.55p    +0.364   +14.093
+  TUR      -7.40p    -6.25p    +4.83p    -0.048    -1.213
+  USA     +11.55p    +4.55p    -4.52p    +0.021    -0.292
+  ZAF      +6.05p    -0.67p    +1.95p    +0.025   -12.897
+  n=46 countries with both endpoints for at least one listed series
+  top1      rose in 35/46; median(others)=+0.0377; JPN=+0.0195 rank=29/46 (1 = largest increase)
+  top10     rose in 32/46; median(others)=+0.0202; JPN=+0.0196 rank=25/46 (1 = largest increase)
+  middle40  rose in 17/46; median(others)=-0.0180; JPN=-0.0164 rank=23/46 (1 = largest increase)
+  gini      rose in 32/46; median(others)=+0.0128; JPN=+0.0134 rank=23/46 (1 = largest increase)
+  p90_p50   rose in 29/46; median(others)=+0.0543; JPN=+0.1679 rank=21/46 (1 = largest increase)
