@@ -71,6 +71,8 @@
 
 ## 4. 分析方法の概要
 
+（分析はすべて公開データと公開コードで行い、手順と数値は GitHub の [socioscope リポジトリ](https://github.com/TakuNabe/socioscope) で再現できます。）
+
 ### 「結果を見る前に基準を決める」
 
 「U 字かどうか」を見た目で判断すると、人によって答えが変わります。そこでこの分析では、**データを見る前に** 仮説と判定基準を文書に書いて固定しました（「事前登録」と呼びます）。結果を見てから都合のよい基準に変えることを防ぐためです。
@@ -240,4 +242,5 @@ U 字にならない国には 3 つのタイプがあります。
 
 - **WID.world（World Inequality Database）**: CC BY-NC-SA 4.0。本記事と図はその派生物であり、同じ条件（出典表示・非商用・同一ライセンスでの再配布）に従います。
 - **OECD**（Tax Database、SOCX、Revenue Statistics）: OECD Terms & Conditions（2024 年 7 月改定）。出典表記「OECD (2026), <dataset>, https://sdmx.oecd.org (accessed on 2026-10-04)」。
-- 分析コードと詳細レポートは GitHub の socioscope リポジトリ（コードは MIT ライセンス）で公開しています。
+- 分析コードと詳細レポートは GitHub の socioscope リポジトリで公開しています（コードは MIT ライセンス）: https://github.com/TakuNabe/socioscope
+- この記事のもとになった総括レポート（数値の出所と再現手順つき）: https://github.com/TakuNabe/socioscope/blob/main/themes/wealth-population-distribution/reports/2026-10-05-summary-wealth-population-distribution.md
