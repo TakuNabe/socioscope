@@ -61,3 +61,33 @@ def test_note_draft_defaults_to_exports_dir_and_rejects_missing(tmp_path, monkey
     assert (tmp_path / "exports" / "note" / "r.md").exists()
     assert (tmp_path / "exports" / "note" / "r.html").exists()
     assert runner.invoke(cli.app, ["note-draft", str(tmp_path / "nope.md")]).exit_code == 2
+
+
+def test_note_draft_embed_images_inlines_png_found_by_basename(tmp_path) -> None:
+    report = tmp_path / "docs" / "a.md"
+    report.parent.mkdir()
+    report.write_text(
+        "# t\n\n【画像を挿入: s01.png】\n\n【画像を挿入: missing.png】\n", encoding="utf-8"
+    )
+    figs = tmp_path / "themes" / "x" / "figures" / "summary"
+    figs.mkdir(parents=True)
+    (figs / "s01.png").write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    runner = CliRunner()
+    r = runner.invoke(
+        cli.app,
+        [
+            "note-draft",
+            str(report),
+            "--out",
+            str(tmp_path / "out"),
+            "--embed-images",
+            "--figures",
+            str(tmp_path / "themes"),
+        ],
+    )
+    assert r.exit_code == 0, r.output
+    html = (tmp_path / "out" / "a.html").read_text(encoding="utf-8")
+    assert '<img src="data:image/png;base64,iVBORw0KGgpmYWtl" alt="s01.png">' in html
+    assert "【画像を挿入: missing.png】" in html
+    assert "embedded 1 image(s)" in r.output
+    assert "missing  missing.png" in r.output

@@ -101,3 +101,27 @@ def test_conversion_is_deterministic_and_handles_missing_title() -> None:
     d = convert_report("## only h2\ntext\n")
     assert d.title == ""
     assert "## only h2" in d.markdown
+
+
+def test_existing_placeholder_lines_are_collected_as_images() -> None:
+    d = convert_report("# t\n\n【画像を挿入: s01.png】\n*図 1: x*\n")
+    assert d.images == ("s01.png",)
+    assert "【画像を挿入: s01.png】" in d.markdown
+    assert "<img" not in d.html
+
+
+def test_embedded_images_render_as_img_tags_in_html_only() -> None:
+    src = {
+        "s01.png": "data:image/png;base64,AAAA",
+        "h6_ideals_vs_tfr.png": "data:image/png;base64,BBBB",
+    }
+    d = convert_report(
+        "# t\n\n【画像を挿入: s01.png】\n\n![理想と TFR](figures/h6_ideals_vs_tfr.png)\n\n"
+        "【画像を挿入: none.png】\n",
+        embedded=src,
+    )
+    assert '<img src="data:image/png;base64,AAAA" alt="s01.png">' in d.html
+    assert '<img src="data:image/png;base64,BBBB" alt="理想と TFR">' in d.html
+    assert "【画像を挿入: none.png】" in d.html  # 見つからない図は placeholder のまま
+    assert "<img" not in d.markdown and "【画像を挿入: s01.png】" in d.markdown
+    assert d.images == ("s01.png", "figures/h6_ideals_vs_tfr.png", "none.png")

@@ -1,5 +1,7 @@
 """socioscope CLI — the only place where adapters are wired to ports (ADR 0001)."""
 
+import base64
+import mimetypes
 import shutil
 import subprocess
 from importlib.metadata import entry_points
@@ -112,6 +114,12 @@ def note_draft(
     copy: bool = typer.Option(
         False, "--copy", help="Also put the HTML on the macOS clipboard (rich-text paste)."
     ),
+    embed_images: bool = typer.Option(
+        False, "--embed-images", help="Inline figures into the HTML as base64 data URIs."
+    ),
+    figures: list[Path] | None = typer.Option(  # noqa: B008
+        None, "--figures", help="Extra directories to search (recursively) for figures. Repeatable."
+    ),
 ) -> None:
     """Convert a report into note.com-ready text (<stem>.note.md / .note.html) and list images.
 
@@ -122,7 +130,19 @@ def note_draft(
     if not report.exists():
         typer.echo(f"{report} not found", err=True)
         raise typer.Exit(2)
-    draft = convert_report(report.read_text(encoding="utf-8"))
+    text = report.read_text(encoding="utf-8")
+    roots = [report.parent, *(figures or [])]
+    embedded: dict[str, str] = {}
+    missing: list[str] = []
+    if embed_images:
+        for ref in convert_report(text).images:
+            name = ref.rsplit("/", 1)[-1]
+            found = find_figure(name, roots)
+            if found is None:
+                missing.append(name)
+            else:
+                embedded[name] = data_uri(found)
+    draft = convert_report(text, embedded)
     out.mkdir(parents=True, exist_ok=True)
     md_path = out / f"{report.stem}.md"
     html_path = out / f"{report.stem}.html"
@@ -135,11 +155,35 @@ def note_draft(
         typer.echo(
             f"note     {draft.tables} table(s) converted to bullet lists (note has no tables)"
         )
-    for img in draft.images:
-        typer.echo(f"image    {(report.parent / img).resolve()}")
+    if embed_images:
+        typer.echo(f"note     embedded {len(embedded)} image(s) into the HTML")
+        for name in missing:
+            typer.echo(f"missing  {name}")
+    else:
+        for img in draft.images:
+            typer.echo(f"image    {(report.parent / img).resolve()}")
     if copy:
         copy_html_to_clipboard(draft.html)
         typer.echo("copied   HTML to clipboard")
+
+
+def find_figure(name: str, roots: list[Path]) -> Path | None:
+    """Find a figure by basename under the given roots (direct hit first, then recursive)."""
+    for root in roots:
+        direct = root / name
+        if direct.is_file():
+            return direct
+    for root in roots:
+        if root.is_dir():
+            hits = sorted(root.rglob(name))
+            if hits:
+                return hits[0]
+    return None
+
+
+def data_uri(path: Path) -> str:
+    mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
 
 
 def copy_html_to_clipboard(html: str) -> None:
