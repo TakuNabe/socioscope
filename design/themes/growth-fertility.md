@@ -98,6 +98,7 @@ H3 レポートが最大の交絡として挙げた**年齢**を調整する。�
 **言えないこと（事前）**: 識別戦略なし。家族支出は内生（出生率が下がると子ども 1 人あたり支出比率が変わる、支出の %GDP は景気で動く）。学歴は所得の代理であり日本の所得勾配と同じ軸ではない。センサスの配偶関係は法律婚のみで、北欧の同棲を含まない（有配偶率を過小評価）。韓国の表は新婚 5 年以内の初婚夫婦に限られ、共稼ぎと所得が同時決定。学歴別 TFR は分母が標本（LFS）の近似。出生順位 UNK の扱い（比例配分せず、UNK を除いた順位のみで寄与率を出す）。
 
 ### H6（意識調査: 理想子ども数と将来期待は北欧の低下を説明するか）— 事前登録（2026-10-06）
+**実装済み**（2026-10-06、`reports/2026-10-06-h6-fertility-ideals.md`）。判定結果: (a) 整合的（r = +0.56、北欧 3 か国の 2011 年の理想は EU-27 中央値より高い。**事前登録の誤り**: NO は EU 外で EB 75.4 に含まれないため北欧は DK FI SE の 3 か国）、(b) 事前基準では判定不能（重なりは 8 か国で NO・HR は EB に無い。FI・DK の Δideal は 8 か国中 1・2 位の低下）、(c) 不支持（生活全般の期待と ΔTFR の ρ ≈ 0。国の経済への期待は COVID 期除外で ρ = 0.33）。
 **問い（ユーザー）**: Eurobarometer・GGS の国別集計を取り込み、北欧の低下の残差（H5）が「理想子ども数の低下」「将来への不確実性」で説明できるかを見る。
 
 **データ調査の結論（2026-10-06）**: マイクロデータ（GESIS・GGP・ESS・EVS）はすべて登録制で機械取得要件を満たさない。理想子ども数の国別集計で静的 URL から取れるのは、(1) **Eurobarometer 75.4（2011）** の国×性×年齢集計を載せた Testa (2012) *Family sizes in Europe: evidence from the 2011 Eurobarometer survey*, VID European Demographic Research Paper 2 の付表（PDF、EU-27）、(2) **GGS-II（2020–23）** 11 か国（DE AT NL CZ HR EE NO DK FI MD UK）の女性 18–49 の理想・意図・実際の子ども数を載せた BiB Working Paper (2025) *Intended, ideal and actual fertility in 11 European countries*, Table 1（PDF、CC BY-SA 4.0）。理想子ども数の欧州横断系列は 2001/2006/2011 の EB で止まり、2011 以降は GGS-II しかない。「不確実性」の代理は **Standard Eurobarometer** の定点項目「今後 12 か月の期待（生活全般・家計・国の経済）」で、data.europa.eu の VOL_A xlsx（CC BY 4.0 相当、COM_REUSE）が 2019 年以降の波で静的 URL（hub API の JSON-LD 経由）から取れる。OECD SF2.2 は 404、Eurofound・ESS に該当項目なし、Väestöliitto Perhebarometri はフィンランド 1 国・図のみ（引用に留める）。

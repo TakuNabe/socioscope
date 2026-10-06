@@ -1,10 +1,12 @@
+import json
 from pathlib import Path
 
 import pytest
 
 from socioscope_core.core.pipeline import Context, Stage
 from socioscope_core.testing.fakes import FakeFetcher, InMemoryRawStore, InMemoryTableStore
-from theme_growth_fertility import dhs, estat, kostat, oecd, pipeline
+from theme_growth_fertility import dhs, estat, kostat, oecd, pipeline, surveys
+from theme_growth_fertility import eurobarometer as ebm
 from theme_growth_fertility import eurostat as es
 from theme_growth_fertility import worldbank as wb
 from theme_growth_fertility.pipeline import build_panel
@@ -25,6 +27,8 @@ EUROSTAT_FIXTURE_BY_DATASET = {
 }
 # H5 fetch items: one OECD CSV + one Eurostat request per dataset x country
 H5_REQUESTS = 1 + len(es.requests())
+# H6 items: two PDFs + one Standard Eurobarometer wave each (JSON-LD then Volume A workbook)
+H6_ITEMS = 2 + len(ebm.WAVES)
 
 
 def make_ctx(responses: dict[str, bytes]) -> Context:
@@ -60,8 +64,14 @@ def test_fetch_stores_raw_with_manifest_and_reports_failures() -> None:
 
     assert result.written == ("growth-fertility/worldbank_wdi/tfr.json",)
     # every other indicator + countries + all e-Stat tables + 2 DHS files had no fake response
-    assert len(result.skipped) == len(wb.INDICATORS) + len(estat.TABLES) + 2 + H5_REQUESTS + len(
-        kostat.RELEASES
+    assert (
+        len(result.skipped)
+        == len(wb.INDICATORS)
+        + len(estat.TABLES)
+        + 2
+        + H5_REQUESTS
+        + len(kostat.RELEASES)
+        + H6_ITEMS
     )
     recs = ctx.raw.records()
     assert len(recs) == 1 and recs[0].license.startswith("CC BY 4.0")
@@ -73,7 +83,8 @@ def test_fetch_also_stores_country_metadata() -> None:
     result = PIPELINE.run(Stage.FETCH, ctx)
     assert "growth-fertility/worldbank_wdi/countries.json" in result.written
     estat_keys = tuple(t.key for t in estat.TABLES)
-    assert all(s.startswith((*estat_keys, "eurostat_", "newlywed_")) for s in result.skipped)
+    h6 = (surveys.TESTA_RAW, surveys.BIB_RAW, "eb_STD")
+    assert all(s.startswith((*estat_keys, "eurostat_", "newlywed_", *h6)) for s in result.skipped)
 
 
 def test_stage_then_mart_build_panel_from_raw() -> None:
@@ -126,9 +137,16 @@ def test_stage_without_raw_skips_explicitly() -> None:
     ctx = make_ctx({})
     result = PIPELINE.run(Stage.STAGE, ctx)
     assert result.written == ()
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(
-        estat.TABLES
-    ) + 2 + H5_REQUESTS + len(kostat.RELEASES)
+    assert (
+        len(result.skipped)
+        == len(wb.INDICATORS)
+        + 1
+        + len(estat.TABLES)
+        + 2
+        + H5_REQUESTS
+        + len(kostat.RELEASES)
+        + H6_ITEMS
+    )
 
 
 # ---------------------------------------------------------------- e-Stat (国民生活基礎調査)
@@ -156,7 +174,10 @@ def test_fetch_stores_estat_files_with_license() -> None:
     assert "growth-fertility/estat_shugyo/shugyo_marital_age_income_2022.xlsx" in result.written
     assert len([w for w in result.written if "/estat_kiso/" in w]) == len(estat.TABLES) - 1
     # no World Bank / DHS / OECD / Eurostat responses
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + 2 + H5_REQUESTS + len(kostat.RELEASES)
+    assert (
+        len(result.skipped)
+        == len(wb.INDICATORS) + 1 + 2 + H5_REQUESTS + len(kostat.RELEASES) + H6_ITEMS
+    )
     recs = [r for r in ctx.raw.records() if r.source in {"estat_kiso", "estat_shugyo"}]
     assert len(recs) == len(estat.TABLES)
     assert all("政府標準利用規約" in r.license and "CC BY 4.0" in r.license for r in recs)
@@ -404,8 +425,14 @@ def test_fetch_stores_dhs_files_with_citation_license() -> None:
         "growth-fertility/dhs_api/dhs_tfr_wealth.json",
         "growth-fertility/dhs_api/dhs_countries.json",
     )
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES) + H5_REQUESTS + len(
-        kostat.RELEASES
+    assert (
+        len(result.skipped)
+        == len(wb.INDICATORS)
+        + 1
+        + len(estat.TABLES)
+        + H5_REQUESTS
+        + len(kostat.RELEASES)
+        + H6_ITEMS
     )
     recs = ctx.raw.records()
     assert {r.source for r in recs} == {dhs.SOURCE}
@@ -487,9 +514,16 @@ def test_fetch_stores_oecd_and_eurostat_raw_with_licenses() -> None:
     assert "growth-fertility/eurostat/eurostat_lfsa_pgaed_FI.json" in result.written
     assert len(result.written) == 1 + 5
     # everything else (WB, e-Stat, DHS, Eurostat for the other countries) is skipped, not fatal
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES) + 2 + (
-        H5_REQUESTS - 6
-    ) + len(kostat.RELEASES)
+    assert (
+        len(result.skipped)
+        == len(wb.INDICATORS)
+        + 1
+        + len(estat.TABLES)
+        + 2
+        + (H5_REQUESTS - 6)
+        + len(kostat.RELEASES)
+        + H6_ITEMS
+    )
     assert sum(s.startswith("eurostat_cens_21me_r2_") for s in result.skipped) == 30
     recs = ctx.raw.records()
     assert {r.source for r in recs} == {oecd.SOURCE, es.SOURCE}
@@ -763,3 +797,186 @@ def test_build_kostat_mart_is_pure_and_deterministic() -> None:
     assert {r["release_year"] for r in out} == {2022}
     assert next(r for r in out if r["metric"] == "couples")["value"] == 11
     assert out == pipeline.build_kostat_mart(list(reversed(staged)))
+
+
+# ---------------------------------------------------------------- H6: ideals / expectations surveys
+
+TESTA_PAGES = (FIXTURES / "testa2012_appendix.txt").read_text(encoding="utf-8").split("\f")
+BIB_PAGES = (FIXTURES / "bib2025_table1.txt").read_text(encoding="utf-8").split("\f")
+STD101 = next(w for w in ebm.WAVES if w.code == "STD101")
+VOL_A_URL = (
+    "https://webgate.ec.europa.eu/ebsm/api/public/odp/download?key=202289A0E60356141402B692C20F5193"
+)
+
+
+def jsonld_with_vol_a(filename: str, url: str) -> bytes:
+    graph = [
+        {"@id": "ds", "@type": "dcat:Dataset"},
+        {
+            "@id": "d1",
+            "@type": "dcat:Distribution",
+            "dct:title": [{"@language": "en", "@value": f"Link to {filename}"}],
+            "dcat:accessURL": {"@id": url},
+        },
+        {
+            "@id": "d2",
+            "@type": "dcat:Distribution",
+            "dct:title": [{"@language": "en", "@value": "Link to STD101_VOL_AA.xlsx"}],
+            "dcat:accessURL": {"@id": "https://x/aa"},
+        },
+    ]
+    return json.dumps({"@graph": graph, "@context": {}}).encode()
+
+
+def vol_a_xlsx() -> bytes:
+    """Minimal VOL A workbook: the life-in-general item for BE / DE / FI (+ aggregates dropped)."""
+    import io
+
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "QA2_1"
+    rows: list[list[object]] = [
+        ["Eurobarometer - 101.3"],
+        ["VOL A weighted", "Terrain/Fieldwork :  02/04 - 09/05/2024"],
+        ["QA2.1. Quelles ...", "QA2.1. What are your expectations for the next twelve months ...?"],
+        ["Votre vie en général ", "Your life in general"],
+        [],
+        [],
+        [],
+        [],
+        ["<<Back to content", "UE27\nEU27", "BE", "D-W", "DE", "D-E", "FI"],
+        ["", "Total", 26423, 1006, 1260, 1559, 299, 1001],
+        [],
+        ["Meilleurs", 1, 1, 1, 1, 1, 1],
+        ["Better", 0.26, 0.3, 0.16, 0.17, 0.19, 0.35],
+        ["Moins bons", 1, 1, 1, 1, 1, 1],
+        ["Worse", 0.17, 0.1, 0.2, 0.23, 0.2, 0.12],
+        ["Sans changement", 1, 1, 1, 1, 1, 1],
+        ["The same", 0.55, 0.6, 0.6, 0.59, 0.6, 0.5],
+        ["Ne sait pas", 1, 1, 1, 1, 1, 1],
+        ["Don't know", 0.02, "-", 0.04, 0.01, 0.01, 0.03],
+    ]
+    for r, row in enumerate(rows, start=1):
+        for c, v in enumerate(row, start=1):
+            ws.cell(row=r, column=c, value=v)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def h6_responses(pdf_from_pages) -> dict[str, bytes]:  # type: ignore[no-untyped-def]
+    return {
+        surveys.TESTA_URL: pdf_from_pages(TESTA_PAGES),
+        surveys.BIB_URL: pdf_from_pages(BIB_PAGES),
+        STD101.jsonld_url: jsonld_with_vol_a("STD101_VOL_A.xlsx", VOL_A_URL),
+        VOL_A_URL: vol_a_xlsx(),
+    }
+
+
+def test_fetch_h6_stores_pdfs_and_resolves_volume_a_from_jsonld(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    ctx = make_ctx(h6_responses(pdf_from_pages))
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert "growth-fertility/testa2012_eb75_4/testa2012_edrp_2012_02.pdf" in result.written
+    assert "growth-fertility/bib2025_ggs2/bib2025_ggs2_fertility_gaps.pdf" in result.written
+    assert "growth-fertility/eurobarometer_std/eb_STD101_meta.json" in result.written
+    assert "growth-fertility/eurobarometer_std/eb_STD101_vol_a.xlsx" in result.written
+    assert len(result.written) == 4
+    # the other 14 waves: one skipped entry each (JSON-LD missing -> workbook not attempted)
+    assert sum(s.startswith("eb_STD") and "meta" in s for s in result.skipped) == len(ebm.WAVES) - 1
+    assert VOL_A_URL in ctx.fetcher.requested  # type: ignore[attr-defined]
+    recs = {r.name: r for r in ctx.raw.records()}
+    assert "not redistributed" in recs["testa2012_edrp_2012_02.pdf"].license
+    assert "CC BY-SA 4.0" in recs["bib2025_ggs2_fertility_gaps.pdf"].license
+    assert "2011/833/EU" in recs["eb_STD101_vol_a.xlsx"].license
+    assert recs["eb_STD101_vol_a.xlsx"].url == VOL_A_URL
+    assert recs["eb_STD101_meta.json"].url == STD101.jsonld_url
+    assert recs["eb_STD101_meta.json"].source == ebm.SOURCE
+
+
+def test_fetch_h6_skips_workbook_when_jsonld_is_unusable() -> None:
+    ctx = make_ctx({STD101.jsonld_url: b"<html>maintenance</html>"})
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert result.written == ("growth-fertility/eurobarometer_std/eb_STD101_meta.json",)
+    assert any(s.startswith("eb_STD101_vol_a") and "Volume A" in s for s in result.skipped)
+    assert all("odp/download" not in u for u in ctx.fetcher.requested)  # type: ignore[attr-defined]
+
+
+def test_stage_h6_writes_ideals_tables_and_expectations(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    ctx = make_ctx(h6_responses(pdf_from_pages))
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert set(result.written) == {
+        pipeline.SURVEYS_EB_TABLE,
+        pipeline.SURVEYS_GGS_TABLE,
+        pipeline.EB_EXPECT_TABLE,
+    }
+    eb_rows = ctx.tables.read_table(pipeline.SURVEYS_EB_TABLE)
+    expected, issues = surveys.eb2011_rows_from_pages(TESTA_PAGES)
+    assert eb_rows == expected and len(issues) == 4
+    assert sum("garbled" in s for s in result.skipped) == 4
+    ggs = ctx.tables.read_table(pipeline.SURVEYS_GGS_TABLE)
+    assert len(ggs) == 11 * 4 * 6 and {r["source"] for r in ggs} == {"bib2025_ggs2"}
+    exp = ctx.tables.read_table(pipeline.EB_EXPECT_TABLE)
+    assert [(r["iso3"], r["better_share"]) for r in exp] == [
+        ("BEL", 30.0),
+        ("DEU", 17.0),
+        ("FIN", 35.0),
+    ]
+    assert {r["wave"] for r in exp} == {"STD101"} and {r["item"] for r in exp} == {"life_general"}
+    assert set(exp[0]) == {
+        "iso3", "wave", "fieldwork_year", "fieldwork_half", "fieldwork_start", "item",
+        "better_share", "worse_share", "same_share", "dk_share", "source",
+    }  # fmt: skip
+    assert sum(s.startswith("eb_STD") and "raw missing" in s for s in result.skipped) == (
+        len(ebm.WAVES) - 1
+    )
+
+
+def test_stage_h6_unreadable_pdf_or_workbook_is_skipped_not_fatal(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    responses = h6_responses(pdf_from_pages)
+    responses[surveys.TESTA_URL] = b"%PDF-1.4 junk"
+    responses[VOL_A_URL] = b"<html>maintenance</html>"
+    ctx = make_ctx(responses)
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert result.written == (pipeline.SURVEYS_GGS_TABLE,)
+    assert any(
+        s.startswith(surveys.TESTA_RAW) and "layout not recognised" in s for s in result.skipped
+    )
+    assert any(
+        s.startswith("eb_STD101_vol_a") and "layout not recognised" in s for s in result.skipped
+    )
+
+
+def test_mart_h6_ideals_long_table_and_expectations_with_net_optimism(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    ctx = make_ctx(h6_responses(pdf_from_pages))
+    PIPELINE.run(Stage.FETCH, ctx)
+    PIPELINE.run(Stage.STAGE, ctx)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert set(result.written) == {pipeline.IDEALS_MART, pipeline.EXPECT_MART}
+    ideals = ctx.tables.read_table(pipeline.IDEALS_MART)
+    eb_rows, _ = surveys.eb2011_rows_from_pages(TESTA_PAGES)
+    assert ideals == surveys.build_ideals_mart(eb_rows, surveys.ggs_rows_from_pages(BIB_PAGES))
+    assert {r["source"] for r in ideals} == {"eb2011", "ggs2020"}
+    exp = ctx.tables.read_table(pipeline.EXPECT_MART)
+    assert [(r["iso3"], r["net_optimism"]) for r in exp] == [
+        ("BEL", 20.0),
+        ("DEU", -6.0),
+        ("FIN", 23.0),
+    ]
+
+
+def test_mart_h6_ideals_written_from_one_survey_and_skipped_without_any(pdf_from_pages) -> None:  # type: ignore[no-untyped-def]
+    ctx = make_ctx({surveys.BIB_URL: pdf_from_pages(BIB_PAGES)})
+    PIPELINE.run(Stage.FETCH, ctx)
+    PIPELINE.run(Stage.STAGE, ctx)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == (pipeline.IDEALS_MART,)
+    assert {r["source"] for r in ctx.tables.read_table(pipeline.IDEALS_MART)} == {"ggs2020"}
+    assert any(s.startswith(pipeline.EB_EXPECT_TABLE) for s in result.skipped)
+    empty = make_ctx({})
+    result = PIPELINE.run(Stage.MART, empty)
+    assert pipeline.IDEALS_MART not in result.written and pipeline.EXPECT_MART not in result.written
+    assert any(s.startswith(pipeline.SURVEYS_EB_TABLE) for s in result.skipped)
