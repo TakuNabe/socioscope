@@ -4,6 +4,7 @@ import base64
 import mimetypes
 import shutil
 import subprocess
+import tempfile
 from importlib.metadata import entry_points
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from socioscope_core.adapters.filesystem_raw import FilesystemRawStore
 from socioscope_core.adapters.http_fetcher import HttpxFetcher
 from socioscope_core.adapters.parquet_store import ParquetTableStore
 from socioscope_core.config import Settings
-from socioscope_core.core.note_export import convert_report
+from socioscope_core.core.note_export import convert_report, paste_script
 from socioscope_core.core.pipeline import Context, Pipeline, Stage
 
 app = typer.Typer(
@@ -120,6 +121,18 @@ def note_draft(
     figures: list[Path] | None = typer.Option(  # noqa: B008
         None, "--figures", help="Extra directories to search (recursively) for figures. Repeatable."
     ),
+    paste_script_flag: bool = typer.Option(
+        False,
+        "--paste-script",
+        help="Also write <stem>.paste.js: run it in the note editor's DevTools console to paste "
+        "the body and upload every figure in place. Needs --figure-base-url.",
+    ),
+    figure_base_url: str | None = typer.Option(
+        None,
+        "--figure-base-url",
+        help="Public URL prefix where <figure basename> can be fetched "
+        "(e.g. https://raw.githubusercontent.com/<owner>/<repo>/main/<...>/figures/summary).",
+    ),
 ) -> None:
     """Convert a report into note.com-ready text (<stem>.note.md / .note.html) and list images.
 
@@ -129,6 +142,9 @@ def note_draft(
     """
     if not report.exists():
         typer.echo(f"{report} not found", err=True)
+        raise typer.Exit(2)
+    if paste_script_flag and not figure_base_url:
+        typer.echo("--paste-script needs --figure-base-url", err=True)
         raise typer.Exit(2)
     text = report.read_text(encoding="utf-8")
     roots = [report.parent, *(figures or [])]
@@ -151,6 +167,10 @@ def note_draft(
     typer.echo(f"title    {draft.title}")
     typer.echo(f"written  {md_path}")
     typer.echo(f"written  {html_path}")
+    if paste_script_flag and figure_base_url:
+        js_path = out / f"{report.stem}.paste.js"
+        js_path.write_text(paste_script(draft, figure_base_url), encoding="utf-8")
+        typer.echo(f"written  {js_path}")
     if draft.tables:
         typer.echo(
             f"note     {draft.tables} table(s) converted to bullet lists (note has no tables)"
@@ -192,5 +212,12 @@ def copy_html_to_clipboard(html: str) -> None:
     if osascript is None:
         typer.echo("--copy needs macOS osascript; skipped", err=True)
         return
-    script = f"set the clipboard to «data HTML{html.encode('utf-8').hex()}»"
-    subprocess.run([osascript, "-e", script], check=True)  # noqa: S603
+    # The HTML can be megabytes (embedded figures), so pass it through a file, not argv.
+    with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as f:
+        f.write(html)
+        path = Path(f.name)
+    try:
+        script = f'set the clipboard to (read (POSIX file "{path}") as «class HTML»)'
+        subprocess.run([osascript, "-e", script], check=True)  # noqa: S603
+    finally:
+        path.unlink(missing_ok=True)
