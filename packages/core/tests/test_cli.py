@@ -91,3 +91,39 @@ def test_note_draft_embed_images_inlines_png_found_by_basename(tmp_path) -> None
     assert "【画像を挿入: missing.png】" in html
     assert "embedded 1 image(s)" in r.output
     assert "missing  missing.png" in r.output
+
+
+def test_copy_html_to_clipboard_passes_a_file_not_the_html_as_argv(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/osascript")
+    monkeypatch.setattr(cli.subprocess, "run", lambda args, check: calls.append(list(args)) or None)
+    big = "<p>x</p>" * 1_000_000
+    cli.copy_html_to_clipboard(big)
+    assert len(calls) == 1 and calls[0][0] == "/usr/bin/osascript"
+    assert len(calls[0][2]) < 500 and "class HTML" in calls[0][2]
+
+
+def test_note_draft_paste_script_requires_figure_base_url(tmp_path) -> None:
+    report = tmp_path / "r.md"
+    report.write_text("# t\n\n【画像を挿入: s01.png】\n", encoding="utf-8")
+    runner = CliRunner()
+    r = runner.invoke(
+        cli.app, ["note-draft", str(report), "--out", str(tmp_path), "--paste-script"]
+    )
+    assert r.exit_code == 2 and "--figure-base-url" in r.output
+    r = runner.invoke(
+        cli.app,
+        [
+            "note-draft",
+            str(report),
+            "--out",
+            str(tmp_path),
+            "--paste-script",
+            "--figure-base-url",
+            "https://raw.githubusercontent.com/o/r/main/figs",
+        ],
+    )
+    assert r.exit_code == 0, r.output
+    js = (tmp_path / "r.paste.js").read_text(encoding="utf-8")
+    assert '"https://raw.githubusercontent.com/o/r/main/figs/"' in js
+    assert "written  " in r.output and "r.paste.js" in r.output

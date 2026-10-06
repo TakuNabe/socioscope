@@ -9,6 +9,7 @@ This module is pure (no I/O) and deterministic: the same report always yields th
 from __future__ import annotations
 
 import html
+import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -241,4 +242,90 @@ def convert_report(markdown: str, embedded: Mapping[str, str] | None = None) -> 
         html="\n".join(html_blocks) + "\n",
         images=tuple(images),
         tables=tables,
+    )
+
+
+_PASTE_JS = """(async () => {
+  // note.com の記事編集画面（editor.note.com）で、本文にフォーカスを当ててから
+  // DevTools コンソールに貼り付けて実行する。本文を貼り、各【画像を挿入】を図で置き換える。
+  const HTML = __HTML__;
+  const BASE = __BASE__;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const pm = document.querySelector(".ProseMirror");
+  if (!pm) throw new Error("note の本文エディタ（.ProseMirror）が見つかりません");
+  pm.focus();
+  const paste = (dt) =>
+    pm.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true })
+    );
+  const selNode = (node, contents) => {
+    const s = window.getSelection();
+    const r = document.createRange();
+    contents ? r.selectNodeContents(node) : r.selectNode(node);
+    s.removeAllRanges();
+    s.addRange(r);
+  };
+  const dt = new DataTransfer();
+  dt.setData("text/html", HTML);
+  dt.setData("text/plain", "note-draft");
+  paste(dt);
+  await sleep(1500);
+  const RX = /^【画像を挿入: ([^】]+)】$/;
+  const log = [];
+  for (let n = 0; n < 200; n++) {
+    const p = [...pm.querySelectorAll("p")].find((e) => RX.test(e.textContent.trim()));
+    if (!p) break;
+    const name = p.textContent.trim().match(RX)[1];
+    const res = await fetch(BASE + name);
+    if (!res.ok) {
+      log.push(name + ": fetch " + res.status);
+      selNode(p, true);
+      document.execCommand("insertText", false, "【画像なし: " + name + "】");
+      await sleep(300);
+      continue;
+    }
+    const type = res.headers.get("content-type") || "image/png";
+    const file = new File([await res.blob()], name, { type });
+    selNode(p, true);
+    await sleep(100);
+    const d = new DataTransfer();
+    d.items.add(file);
+    paste(d);
+    let ok = false;
+    for (let w = 0; w < 120; w++) {
+      await sleep(250);
+      const f = p.nextElementSibling;
+      const img = f && f.tagName === "FIGURE" ? f.querySelector("img") : null;
+      if (img && img.src.startsWith("https")) { ok = true; break; }
+    }
+    if (!ok) { log.push(name + ": upload timeout"); break; }
+    selNode(p, true);
+    await sleep(100);
+    document.execCommand("delete");
+    await sleep(300);
+    if (p.isConnected && p.textContent.trim() === "") {
+      selNode(p, false);
+      await sleep(100);
+      document.execCommand("delete");
+      await sleep(300);
+    }
+    log.push(name + ": ok");
+  }
+  console.log(log.join("\\n"));
+  const left = (pm.innerText.match(/【画像を挿入/g) || []).length;
+  console.log("figures:", pm.querySelectorAll("figure").length, "placeholders left:", left);
+})();
+"""
+
+
+def paste_script(draft: NoteDraft, figure_base_url: str) -> str:
+    """Build a self-contained script for the note editor's DevTools console.
+
+    It pastes ``draft.html`` into the body and replaces every 【画像を挿入: x.png】 paragraph
+    with the figure fetched from ``figure_base_url + x.png`` (the editor accepts pasted image
+    *files* and uploads them; it strips ``<img>`` tags, so data URIs cannot be used).
+    """
+    base = figure_base_url if figure_base_url.endswith("/") else figure_base_url + "/"
+    return _PASTE_JS.replace("__HTML__", json.dumps(draft.html, ensure_ascii=False)).replace(
+        "__BASE__", json.dumps(base)
     )

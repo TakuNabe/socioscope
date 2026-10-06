@@ -125,3 +125,16 @@ def test_embedded_images_render_as_img_tags_in_html_only() -> None:
     assert "【画像を挿入: none.png】" in d.html  # 見つからない図は placeholder のまま
     assert "<img" not in d.markdown and "【画像を挿入: s01.png】" in d.markdown
     assert d.images == ("s01.png", "figures/h6_ideals_vs_tfr.png", "none.png")
+
+
+def test_paste_script_bundles_html_and_figure_base_url() -> None:
+    from socioscope_core.core.note_export import paste_script
+
+    d = convert_report("# t\n\n<p>x</p>\n\n【画像を挿入: s01.png】\n")
+    js = paste_script(d, "https://raw.githubusercontent.com/o/r/main/figs/")
+    assert js.startswith("(async () => {")
+    assert '"https://raw.githubusercontent.com/o/r/main/figs/"' in js
+    # HTML は JSON 文字列として埋め込む（エスケープされる）
+    assert '"<p>&lt;p&gt;x&lt;/p&gt;</p>' in js
+    assert "【画像を挿入" in js and ".ProseMirror" in js
+    assert paste_script(d, "https://x/") == paste_script(d, "https://x/")
