@@ -16,6 +16,12 @@ INDICATORS: dict[str, str] = {
     "gdp_pcap_ppp": "NY.GDP.PCAP.PP.KD",  # GDP per capita, PPP (constant intl $)
     "gdp_growth": "NY.GDP.MKTP.KD.ZG",  # GDP growth (annual %)
     "population": "SP.POP.TOTL",  # Population, total (sample filters only)
+    # H4 demographic-transition stage indicators (design/themes/growth-fertility.md "### H4")
+    "u5_mortality": "SH.DYN.MORT",  # Mortality rate, under-5 (per 1,000 live births)
+    "fem_sec_enrol": "SE.SEC.ENRR.FE",  # School enrollment, secondary, female (% gross)
+    "urban_share": "SP.URB.TOTL.IN.ZS",  # Urban population (% of total population)
+    "fem_lfp": "SL.TLF.CACT.FE.ZS",  # Labor force participation rate, female 15+ (%, ILO est.)
+    "life_exp": "SP.DYN.LE00.IN",  # Life expectancy at birth, total (years)
 }
 
 

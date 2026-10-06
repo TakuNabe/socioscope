@@ -4,7 +4,7 @@ import pytest
 
 from socioscope_core.core.pipeline import Context, Stage
 from socioscope_core.testing.fakes import FakeFetcher, InMemoryRawStore, InMemoryTableStore
-from theme_growth_fertility import estat, pipeline
+from theme_growth_fertility import dhs, estat, pipeline
 from theme_growth_fertility import worldbank as wb
 from theme_growth_fertility.pipeline import build_panel
 from theme_growth_fertility.wiring import PIPELINE
@@ -12,6 +12,8 @@ from theme_growth_fertility.wiring import PIPELINE
 FIXTURES = Path(__file__).parent / "fixtures"
 FIXTURE = (FIXTURES / "tfr_page.json").read_bytes()
 COUNTRIES = (FIXTURES / "countries_page.json").read_bytes()
+DHS_DATA = (FIXTURES / "dhs_tfr_wealth_page.json").read_bytes()
+DHS_COUNTRIES = (FIXTURES / "dhs_countries_page.json").read_bytes()
 
 
 def make_ctx(responses: dict[str, bytes]) -> Context:
@@ -23,7 +25,12 @@ def make_ctx(responses: dict[str, bytes]) -> Context:
 def all_responses() -> dict[str, bytes]:
     out = {wb.indicator_url(code): FIXTURE for code in wb.INDICATORS.values()}
     out[wb.countries_url()] = COUNTRIES
+    out.update(dhs_responses())
     return out
+
+
+def dhs_responses() -> dict[str, bytes]:
+    return {dhs.data_url(): DHS_DATA, dhs.countries_url(): DHS_COUNTRIES}
 
 
 def test_fetch_stores_raw_with_manifest_and_reports_failures() -> None:
@@ -31,8 +38,8 @@ def test_fetch_stores_raw_with_manifest_and_reports_failures() -> None:
     result = PIPELINE.run(Stage.FETCH, ctx)
 
     assert result.written == ("growth-fertility/worldbank_wdi/tfr.json",)
-    # every other indicator + countries + all e-Stat tables had no fake response
-    assert len(result.skipped) == len(wb.INDICATORS) + len(estat.TABLES)
+    # every other indicator + countries + all e-Stat tables + 2 DHS files had no fake response
+    assert len(result.skipped) == len(wb.INDICATORS) + len(estat.TABLES) + 2
     recs = ctx.raw.records()
     assert len(recs) == 1 and recs[0].license.startswith("CC BY 4.0")
     assert ctx.raw.get(theme="growth-fertility", source="worldbank_wdi", name="tfr.json") == FIXTURE
@@ -50,7 +57,8 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
     PIPELINE.run(Stage.FETCH, ctx)
     staged = PIPELINE.run(Stage.STAGE, ctx)
     assert set(staged.written) == {f"staged/worldbank/{k}" for k in wb.INDICATORS} | {
-        "staged/worldbank/countries"
+        "staged/worldbank/countries",
+        pipeline.DHS_TABLE,
     }
     # the 'NAC' aggregate is dropped at stage using the country metadata
     assert [r["iso3"] for r in ctx.tables.read_table("staged/worldbank/tfr")] == [
@@ -60,7 +68,7 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
     ]
 
     mart = PIPELINE.run(Stage.MART, ctx)
-    assert mart.written == ("marts/growth_fertility_panel",)
+    assert mart.written == ("marts/growth_fertility_panel", pipeline.DHS_MART)
     panel = ctx.tables.read_table("marts/growth_fertility_panel")
     assert panel[0] == {
         "iso3": "JPN",
@@ -72,6 +80,11 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
         "gdp_pcap_ppp": 1.36,
         "gdp_growth": 1.36,
         "population": 1.36,
+        "u5_mortality": 1.36,
+        "fem_sec_enrol": 1.36,
+        "urban_share": 1.36,
+        "fem_lfp": 1.36,
+        "life_exp": 1.36,
     }
     assert [p["iso3"] for p in panel] == ["JPN", "JPN", "USA"]
 
@@ -80,7 +93,7 @@ def test_stage_without_raw_skips_explicitly() -> None:
     ctx = make_ctx({})
     result = PIPELINE.run(Stage.STAGE, ctx)
     assert result.written == ()
-    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES)
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES) + 2
 
 
 # ---------------------------------------------------------------- e-Stat (国民生活基礎調査)
@@ -107,7 +120,7 @@ def test_fetch_stores_estat_files_with_license() -> None:
     assert "growth-fertility/estat_kiso/workers_marital_income_2025.csv" in result.written
     assert "growth-fertility/estat_shugyo/shugyo_marital_age_income_2022.xlsx" in result.written
     assert len([w for w in result.written if "/estat_kiso/" in w]) == len(estat.TABLES) - 1
-    assert len(result.skipped) == len(wb.INDICATORS) + 1  # World Bank had no fake responses
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + 2  # no World Bank / DHS responses
     recs = [r for r in ctx.raw.records() if r.source in {"estat_kiso", "estat_shugyo"}]
     assert len(recs) == len(estat.TABLES)
     assert all("政府標準利用規約" in r.license and "CC BY 4.0" in r.license for r in recs)
@@ -335,3 +348,91 @@ def test_build_panel_keeps_missing_as_none() -> None:
             "gdp_growth": 0.4,
         },
     ]
+
+
+# ---------------------------------------------------------------- DHS (TFR by wealth quintile)
+
+
+def test_wdi_stage_indicators_are_registered() -> None:
+    assert wb.INDICATORS["u5_mortality"] == "SH.DYN.MORT"
+    assert wb.INDICATORS["fem_sec_enrol"] == "SE.SEC.ENRR.FE"
+    assert wb.INDICATORS["urban_share"] == "SP.URB.TOTL.IN.ZS"
+    assert wb.INDICATORS["fem_lfp"] == "SL.TLF.CACT.FE.ZS"
+    assert wb.INDICATORS["life_exp"] == "SP.DYN.LE00.IN"
+
+
+def test_fetch_stores_dhs_files_with_citation_license() -> None:
+    ctx = make_ctx(dhs_responses())
+    result = PIPELINE.run(Stage.FETCH, ctx)
+    assert result.written == (
+        "growth-fertility/dhs_api/dhs_tfr_wealth.json",
+        "growth-fertility/dhs_api/dhs_countries.json",
+    )
+    assert len(result.skipped) == len(wb.INDICATORS) + 1 + len(estat.TABLES)
+    recs = ctx.raw.records()
+    assert {r.source for r in recs} == {dhs.SOURCE}
+    assert all("The DHS Program Indicator Data API" in r.license for r in recs)
+    assert {r.url for r in recs} == {dhs.data_url(), dhs.countries_url()}
+    assert ctx.raw.get(theme="growth-fertility", source="dhs_api", name="dhs_countries.json") == (
+        DHS_COUNTRIES
+    )
+
+
+def test_stage_dhs_writes_long_table_and_reports_unmapped_codes() -> None:
+    ctx = make_ctx(dhs_responses())
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert result.written == (pipeline.DHS_TABLE,)  # WB / e-Stat absent -> independent
+    assert any("OS" in s and "iso3" in s.lower() for s in result.skipped)
+    rows = ctx.tables.read_table(pipeline.DHS_TABLE)
+    assert len(rows) == 7
+    assert {r["iso3"] for r in rows} == {"AFG", "ALB"}
+    assert {r["source"] for r in rows} == {"dhs_api"}
+
+
+def test_stage_dhs_without_country_metadata_fails_closed() -> None:
+    ctx = make_ctx({dhs.data_url(): DHS_DATA})
+    PIPELINE.run(Stage.FETCH, ctx)
+    result = PIPELINE.run(Stage.STAGE, ctx)
+    assert result.written == ()
+    assert any("dhs_countries" in s and "raw missing" in s for s in result.skipped)
+
+
+def test_mart_dhs_from_staged_only() -> None:
+    ctx = make_ctx(dhs_responses())
+    PIPELINE.run(Stage.FETCH, ctx)
+    PIPELINE.run(Stage.STAGE, ctx)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert result.written == (pipeline.DHS_MART,)
+    rows = ctx.tables.read_table(pipeline.DHS_MART)
+    assert set(rows[0]) == {
+        "iso3",
+        "country",
+        "dhs_country_code",
+        "survey_id",
+        "survey_year",
+        "survey_type",
+        "quintile",
+        "quintile_label",
+        "value",
+        "ci_low",
+        "ci_high",
+        "denominator_weighted",
+        "source",
+    }
+    assert [(r["survey_year"], r["iso3"], r["quintile"]) for r in rows] == [
+        (2008, "ALB", 1),
+        (2008, "ALB", 5),
+        (2015, "AFG", 1),
+        (2015, "AFG", 2),
+        (2015, "AFG", 3),
+        (2015, "AFG", 4),
+        (2015, "AFG", 5),
+    ]
+
+
+def test_build_dhs_mart_sorts_and_keeps_rows_unchanged() -> None:
+    a = {"survey_year": 2015, "iso3": "AFG", "quintile": 2, "value": 5.4}
+    b = {"survey_year": 2008, "iso3": "ALB", "quintile": 5, "value": None}
+    c = {"survey_year": 2015, "iso3": "AFG", "quintile": 1, "value": 5.3}
+    assert pipeline.build_dhs_mart([a, b, c]) == [b, c, a]
