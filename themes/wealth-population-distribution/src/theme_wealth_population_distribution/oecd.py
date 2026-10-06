@@ -137,6 +137,15 @@ INDICATORS: dict[str, Indicator] = {
 }
 
 REQUIRED_COLUMNS = ("STRUCTURE_ID", "REF_AREA", "TIME_PERIOD", "OBS_VALUE", "OBS_STATUS")
+CSV_HEADER_PREFIX = b"STRUCTURE,STRUCTURE_ID,"  # csvfilewithlabels output always starts so
+
+
+def is_csv_payload(payload: bytes) -> bool:
+    """True when the body looks like an SDMX csvfilewithlabels file (header prefix check).
+
+    An HTML error/parking page or an SDMX error XML must not be stored as raw (fail closed).
+    """
+    return payload.startswith(CSV_HEADER_PREFIX)
 
 
 def data_url(ind: Indicator) -> str:

@@ -63,6 +63,17 @@ class WorldBankPage(BaseModel):
     total: int
 
 
+def is_json_list_payload(payload: bytes) -> bool:
+    """True when the body parses as a JSON array (the WB API's [meta, data] shape).
+
+    HTML error pages and JSON error objects ({"message": ...}) are rejected so the fetch
+    never stores them as raw (fail closed)."""
+    try:
+        return isinstance(json.loads(payload), list)
+    except ValueError:
+        return False
+
+
 def _split(payload: bytes) -> tuple[WorldBankPage, list[object]]:
     """World Bank returns a 2-element array: [meta, data]. Validate; fail closed on pagination."""
     doc = json.loads(payload)
