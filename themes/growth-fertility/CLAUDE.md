@@ -7,7 +7,9 @@ src/theme_growth_fertility/
   worldbank.py   World Bank WDI API の URL 組み立てと JSON → 行 の純粋変換（決定的・テスト対象）
   estat.py       e-Stat 統計表（appId 不要）の URL 組み立てと ファイル → 行 の純粋変換（fail-closed）: 国民生活基礎調査 CSV（CP932）と 就業構造基本調査 第40表 xlsx（標準ライブラリで解析）
   dhs.py         DHS Program Indicator Data API（キー不要・引用義務）の URL 組み立てと JSON → 行 の純粋変換（TFR × 富裕五分位、ISO3 付け、fail-closed）
-  pipeline.py    fetch / stage / mart（Port 経由。I/O はここだけ。WB・e-Stat・DHS は独立に stage される）
+  oecd.py        OECD SOCX（SDMX REST、鍵不要）家族支出 TP51 の URL 組み立てと CSV → 行（STRUCTURE_ID・次元コード照合、38 加盟国に限定、fail-closed）。他テーマの oecd.py は import しない
+  eurostat.py    Eurostat dissemination API（JSON-stat 2.0）の国別 Request、`jsonstat_rows`（疎 value の展開）、staged 行変換、mart 集計（有配偶率・出生順位別 TFR・学歴別 TFR）の純粋関数
+  pipeline.py    fetch / stage / mart（Port 経由。I/O はここだけ。WB・e-Stat・DHS・OECD・Eurostat は独立に stage される。H5 は `# ---- H5` ブロックの `_fetch_h5/_stage_h5/_mart_h5`）
   wiring.py      PIPELINE（entry point）。stage 関数の登録のみ
   analysis/      report 用スクリプト（決定的、seed 固定）
 queries/         DuckDB 用 SQL（? バインド）
@@ -37,6 +39,16 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | `marts/jp_income_class_fertility` | long（metric 1 行） | survey, survey_year, year, income_class, income_class_lower_yen, income_class_upper_yen, sex, metric, value, denominator, source。metric = `married_share`（性別）, `children_household_share`, `household_share_pct`, `children_household_share_pct`（定義は `design/themes/growth-fertility.md`） |
 | `staged/estat/shugyo_marital_age_income` | 性×配偶関係×年齢階級×所得階級 | survey_year, year（＝調査年 2022）, sex(total/male/female), marital(total/never_married), age_class, age_lower, age_upper（排他的上限）, income_class…, persons, source(`estat_shugyo`), stat_inf_id（3 × 2 × 16 × 17 = 1,632 行。従業上の地位＝総数・教育＝総数のみ） |
 | `marts/jp_income_age_marital` | long（性×年齢×所得、metric 1 行） | survey, survey_year, year, sex, age_class, age_lower, age_upper, income_class, income_class_lower_yen, income_class_upper_yen, metric, value, denominator, source。metric = `ever_married_share` = (総数 − 未婚)/総数（816 行、`value` NULL 19 = 有業者 0 のセル）。年齢・所得の `total` 行も保持 |
+| `staged/oecd/family_spending` | iso3×year×spending_type | iso3, year, spending_type(`_T`/`C`/`K`), value, unit(`PT_B1GQ`), source(`oecd_socx`)（SOCX TP51 公的家族支出 %GDP、OECD 38、1980–） |
+| `marts/oecd_family_spending` | 〃 | staged と同列。`iso3, year, spending_type` でソート |
+| `staged/eurostat/census_marital_education` | iso3×sex×age×isced11×marsta | iso3, year(2021), sex, age_class, age_lower, age_upper（排他的上限）, isced11, marsta(TOTAL/MAR_REP/UNK), value, source(`eurostat`) |
+| `marts/eu_census_marital_by_education` | iso3×sex×age×学歴 3 群 | iso3, year, sex, age_class, age_lower, age_upper, isced_group(ED0-2/ED3-4/ED5-8), married(=Σ MAR_REP), total(=Σ TOTAL − Σ UNK), married_share, source |
+| `staged/eurostat/births_by_order` | iso3×year×age×ord_brth | iso3, year, age_class(Y15…Y49, UNK), ord_brth(TOTAL/1/2/3/GE4/UNK), births, source |
+| `staged/eurostat/population_female_age` | iso3×year×age | iso3, year, age_class(Y15…Y49), women, source |
+| `marts/eu_tfr_by_birth_order` | iso3×year×order | iso3, year, order(1/2/3/GE4/TOTAL/UNK), tfr(=Σ_{15–49} births/women), births_age_unknown, source |
+| `staged/eurostat/births_by_education` | iso3×year×age×isced11 | iso3, year, age_class（1 歳刻みと 5 歳階級の両方を保持）, isced11(TOTAL/ED0-2/ED3_4/ED5-8/NAP/UNK), births, source |
+| `staged/eurostat/lfs_population_female_education` | iso3×year×age×isced11 | iso3, year, age_class(5 歳階級), isced11(ED0-2/ED3_4/ED5-8/TOTAL), women_thousand, source（LFS 標本、非公表セルは行なし） |
+| `marts/eu_tfr_by_education` | iso3×year×学歴群 | iso3, year, isced_group(ED0-2/ED3_4/ED5-8/TOTAL), tfr(=5 × Σ_{7 階級} births/(women×1000)), women_total_thousand, source |
 
 ## 分析スクリプト・レポート
 | script | report | 内容 |
@@ -46,6 +58,7 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 | `analysis/a20261004_h3_jp_income_class.py` | `reports/2026-10-04-h3-jp-income-class.md`（＋ `.stdout.txt`、`figures/h3_*.png`） | H3: 日本の所得階級 × 男性有配偶率・児童世帯割合の勾配（階級単位の加重 OLS・Spearman・波間交互作用）と、国間 ln GDP pc × TFR 勾配との符号比較（レベル間比較、記述のみ） |
 | `analysis/a20261004_h3b_age_adjusted.py` | `reports/2026-10-04-h3b-age-adjusted.md`（＋ `.stdout.txt`、`figures/h3b_*.png`） | H3b（H3 の事前に定めた精緻化）: 就業構造基本調査 2022 第40表で男性既婚経験率の所得勾配を年齢調整（年齢階級内勾配・直接法標準化・年齢 FE 付き加重 OLS）し、未調整勾配・H3 の勾配と比較（減衰率）。H3 のヘルパ（`band_midpoint`, `wls`, `band_frame` 等）を import して再利用 |
 | `analysis/a20261005_h4_stage_vs_gdp.py` | `reports/2026-10-05-h4-stage-vs-gdp.md`（＋ `.stdout.txt`、`figures/h4_*.png`） | H4: 国間の負の所得勾配は人口転換の段階による見かけか。(a) 同一サンプルで段階指標 5 本（u5_mortality, fem_sec_enrol, urban_share, fem_lfp, life_exp）を加えた国間 ln GDP 係数の減衰比、(b) 二元 FE＋段階指標の ln GDP 係数、(c) 5 歳未満死亡率の層内勾配 vs 全体、(d) DHS 富裕五分位 TFR の gap = Q5 − Q1 を調査年の ln GDP に回帰（pooled／国 FE／人口加重 WLS）、(e) 日本は図示のみ。H1 の `build_regression_frame`/`fit`/`OIL_STATES`/`SMALL_POP` を import。判定基準は事前固定。識別戦略なし |
+| `analysis/a20261006_h5_europe_korea_policy.py` | `reports/2026-10-06-h5-europe-korea-policy.md`（＋ `.stdout.txt`、`figures/h5_*.png`） | H5: (a) OECD SOCX 家族支出（合計／現金／現物）× WDI TFR の二元 FE（同時・3 年ラグ）、ΔTFR(2010→2021) の横断回帰、係数 × Δ支出 の分解（北欧 4 か国）、(b) Eurostat 2021 センサスの性 × 年齢 × 学歴 3 群の有配偶率の学歴勾配（年齢 FE 付き加重 OLS、31 か国）＋ 韓国新婚夫婦の所得区間別有子率の ln 所得勾配（記述）、(c1) 出生順位別 TFR の 2010→最新 分解と第 1 子寄与率、(c2) 学歴別 TFR（LFS 分母）の変化。H1 の `fit`、H3 の `wls`/`Coef` を import。判定基準は事前固定。識別戦略なし |
 | `analysis/s20261005_summary.py` | `reports/2026-10-05-summary-growth-fertility.md`（＋ `.stdout.txt`、`figures/summary/s01_*.png`〜`s15_*.png`） | 総括（note.com 向け、日本語・一般読者）: H1〜H4 の結論を同じ mart から**再計算**して 15 枚の図にする（新しい推定なし。H1/H2/H3/H3b/H4 の推定関数を import。s14 = 段階指標をそろえた国間／国内係数、s15 = DHS 五分位プロファイルと gap 散布）。図の文字は日本語（フォントは Hiragino Sans → … → Yu Gothic を検出、無ければ DejaVu で警告。下記規約の例外）。PNG は `metadata={"Software": None}` でバイト再現。純粋ヘルパは `tests/test_summary.py` |
 
 ## 規約
@@ -59,3 +72,5 @@ tests/           fixtures/（実レスポンスの縮約）＋ Fake による状
 - `marts/jp_income_class_fertility` は WB mart と独立に書かれる（staged/estat が無ければ skip）。出典表記: 「出典：政府統計の総合窓口(e-Stat)、国民生活基礎調査（厚生労働省）を加工」。
 - DHS（`dhs.py`）: raw は `dhs_tfr_wealth.json` と `dhs_countries.json` の 2 件。stage は両方揃うときだけ `staged/dhs/tfr_by_wealth_quintile` を書く（countries が無いと fail-closed）。ISO3 は `/rest/dhs/countries` の `ISO3_CountryCode` で付け、付かない国コード（`OS`＝Nigeria (Ondo State) 等）は行を落として skipped に残す。`CharacteristicCategory != "Wealth quintile"`・未知ラベル・他指標の行は落とす。`TotalPages != 1` / `RecordCount != len(Data)` は `ValueError`。富裕五分位は**資産ベースの国内相対順位**（所得額ではない）。出典表記（引用義務）: `dhs.LICENSE` の文言をレポートに載せる。mart は WB・e-Stat と独立。
 - 分析スクリプトは `reports/figures/` に図を保存し、標準出力を `reports/<date>-<slug>.stdout.txt` に残す（report の数値の出所）。図の文字は matplotlib 同梱フォントで描ける英語にする（日本語フォントに依存させない）。例外は一般読者向けの総括（`s20261005_summary.py`、`figures/summary/`）のみ: 日本語フォントを `matplotlib.font_manager` で検出し、無い環境では DejaVu にフォールバックして stderr に警告する（PNG の sha256 はフォント環境に依存する）。
+- OECD SOCX（`oecd.py`、H5）: raw は `oecd_socx/socx_family_spending.csv` 1 件（`_T+C+K` を 1 リクエスト）。`STRUCTURE_ID` と固定次元（SOCX / PT_B1GQ / ES10 / TP51 / _Z）を全行で照合し、違えば `ValueError`。`OBS_VALUE` 空は落とし、`OECD_MEMBERS` 38 か国以外（`OECD` 集計、BGR/HRV/PER/ROU）は落とす。他テーマの `oecd.py` と URL 規約は同じだが import しない（ADR 0001）。出典表記: 「OECD (2026), Social Expenditure Database (SOCX), https://sdmx.oecd.org (accessed on 2026-10-06)」。
+- Eurostat（`eurostat.py`、H5）: JSON-stat の `value` は**疎な dict**（文字列セル番号 → 値）で、無いセルは欠損。`jsonstat_rows` は `id` × `size` の直積で位置を復元し、`value` に無いセルは出さない（補完しない）。`error` キー・`class != "dataset"`・`id/size/value` 欠落・次元サイズ不一致は `ValueError`。geo → ISO3 は固定辞書 `GEO_TO_ISO3`（`EL`→GRC, `UK`→GBR）で、辞書に無い geo（NUTS 地域）は落とす。リクエストは dataset × 国で分割（raw `eurostat_<dataset>_<geo>.json`）し、stage は raw のある国だけを連結、無い国は skipped に残す。mart は分母（`demo_pjan` / `lfsa_pgaed`）がそろうときだけ書く。`demo_faeduc` の 5 歳階級が無い国は 1 歳刻み 5 本の合計を使う。LFS 分母が無く出生 > 0 の階級がある年・学歴群は落とす。出典表記: 「Source: Eurostat, <dataset>（accessed 2026-10-06）」。センサスの配偶関係は法律婚＋登録パートナーで同棲を含まない。

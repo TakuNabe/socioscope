@@ -11,7 +11,8 @@ from collections.abc import Callable, Sequence
 
 from socioscope_core.core.pipeline import Context, Stage, StageResult
 from socioscope_core.ports.fetcher import FetchError
-from theme_growth_fertility import dhs, estat
+from theme_growth_fertility import dhs, estat, oecd
+from theme_growth_fertility import eurostat as es
 from theme_growth_fertility import worldbank as wb
 
 THEME = "growth-fertility"
@@ -37,6 +38,27 @@ DHS_RAW_COUNTRIES = "dhs_countries.json"
 DHS_URLS: dict[str, str] = {DHS_RAW_DATA: dhs.data_url(), DHS_RAW_COUNTRIES: dhs.countries_url()}
 DHS_TABLE = "staged/dhs/tfr_by_wealth_quintile"
 DHS_MART = "marts/dhs_tfr_by_wealth_quintile"
+# ---- H5: OECD / Eurostat (independent of the sources above; see _fetch_h5/_stage_h5/_mart_h5)
+OECD_RAW = "socx_family_spending.csv"
+OECD_TABLE = "staged/oecd/family_spending"
+OECD_MART = "marts/oecd_family_spending"
+EU_TABLES: dict[str, str] = {
+    "cens_21me_r2": "staged/eurostat/census_marital_education",
+    "demo_fordagec": "staged/eurostat/births_by_order",
+    "demo_pjan": "staged/eurostat/population_female_age",
+    "demo_faeduc": "staged/eurostat/births_by_education",
+    "lfsa_pgaed": "staged/eurostat/lfs_population_female_education",
+}
+_EU_PARSERS: dict[str, Callable[[bytes], list[dict[str, object]]]] = {
+    "cens_21me_r2": es.census_rows,
+    "demo_fordagec": es.births_order_rows,
+    "demo_pjan": es.population_female_rows,
+    "demo_faeduc": es.births_education_rows,
+    "lfsa_pgaed": es.lfs_population_rows,
+}
+EU_CENSUS_MART = "marts/eu_census_marital_by_education"
+EU_TFR_ORDER_MART = "marts/eu_tfr_by_birth_order"
+EU_TFR_EDU_MART = "marts/eu_tfr_by_education"
 
 
 def _sources() -> dict[str, str]:
@@ -95,6 +117,10 @@ def fetch(ctx: Context) -> StageResult:
             payload=payload,
         )
         written.append(rec.relative_path)
+    # ---- H5: OECD / Eurostat
+    h5_written, h5_skipped = _fetch_h5(ctx)
+    written.extend(h5_written)
+    skipped.extend(h5_skipped)
     return StageResult(stage=Stage.FETCH, written=tuple(written), skipped=tuple(skipped))
 
 
@@ -170,10 +196,12 @@ def stage(ctx: Context) -> StageResult:
     wb_written, wb_skipped = _stage_worldbank(ctx)
     es_written, es_skipped = _stage_estat(ctx)
     dhs_written, dhs_skipped = _stage_dhs(ctx)
+    # ---- H5: OECD / Eurostat
+    h5_written, h5_skipped = _stage_h5(ctx)
     return StageResult(
         stage=Stage.STAGE,
-        written=tuple(wb_written + es_written + dhs_written),
-        skipped=tuple(wb_skipped + es_skipped + dhs_skipped),
+        written=tuple(wb_written + es_written + dhs_written + h5_written),
+        skipped=tuple(wb_skipped + es_skipped + dhs_skipped + h5_skipped),
     )
 
 
@@ -422,4 +450,92 @@ def mart(ctx: Context) -> StageResult:
     else:
         ctx.tables.write_table(DHS_MART, build_dhs_mart(dhs_rows))
         written.append(DHS_MART)
+    # ---- H5: OECD / Eurostat
+    h5_written, h5_skipped = _mart_h5(ctx)
+    written.extend(h5_written)
+    skipped.extend(h5_skipped)
     return StageResult(stage=Stage.MART, written=tuple(written), skipped=tuple(skipped))
+
+
+# ---- H5: OECD / Eurostat ----------------------------------------------------------------
+
+
+def _fetch_h5(ctx: Context) -> tuple[list[str], list[str]]:
+    """OECD SOCX family spending (1 CSV) + Eurostat JSON-stat, one request per dataset × country."""
+    written: list[str] = []
+    skipped: list[str] = []
+    items: list[tuple[str, str, str, str]] = [
+        (oecd.SOURCE, OECD_RAW, oecd.family_spending_url(), oecd.LICENSE)
+    ]
+    items.extend((es.SOURCE, r.raw_name, r.url, es.LICENSE) for r in es.requests())
+    for source, name, url, license_ in items:
+        try:
+            payload = ctx.fetcher.fetch(url)
+        except FetchError as e:
+            skipped.append(f"{name}: {e}")
+            continue
+        rec = ctx.raw.put(
+            theme=THEME, source=source, name=name, url=url, license=license_, payload=payload
+        )
+        written.append(rec.relative_path)
+    return written, skipped
+
+
+def _stage_h5(ctx: Context) -> tuple[list[str], list[str]]:
+    """One staged table per Eurostat dataset (countries concatenated) + the OECD table.
+
+    Missing countries are reported in *skipped*; a dataset with no raw at all is not written.
+    """
+    written: list[str] = []
+    skipped: list[str] = []
+    socx = ctx.raw.get(theme=THEME, source=oecd.SOURCE, name=OECD_RAW)
+    if socx is None:
+        skipped.append(f"{OECD_RAW}: raw missing (run fetch)")
+    else:
+        ctx.tables.write_table(OECD_TABLE, oecd.family_spending_rows(socx))
+        written.append(OECD_TABLE)
+    by_dataset: dict[str, list[dict[str, object]]] = {}
+    for req in es.requests():
+        payload = ctx.raw.get(theme=THEME, source=es.SOURCE, name=req.raw_name)
+        if payload is None:
+            skipped.append(f"{req.raw_name}: raw missing (run fetch)")
+            continue
+        by_dataset.setdefault(req.dataset, []).extend(_EU_PARSERS[req.dataset](payload))
+    for dataset, table in EU_TABLES.items():
+        if dataset in by_dataset:
+            ctx.tables.write_table(table, by_dataset[dataset])
+            written.append(table)
+    return written, skipped
+
+
+def _mart_h5(ctx: Context) -> tuple[list[str], list[str]]:
+    written: list[str] = []
+    skipped: list[str] = []
+    staged: dict[str, list[dict[str, object]]] = {}
+    for table in (OECD_TABLE, *EU_TABLES.values()):
+        try:
+            staged[table] = ctx.tables.read_table(table)
+        except FileNotFoundError:
+            skipped.append(f"{table}: staged table missing (run stage)")
+    if OECD_TABLE in staged:
+        rows = sorted(
+            staged[OECD_TABLE],
+            key=lambda r: (str(r["iso3"]), int(str(r["year"])), str(r["spending_type"])),
+        )
+        ctx.tables.write_table(OECD_MART, rows)
+        written.append(OECD_MART)
+    census = staged.get(EU_TABLES["cens_21me_r2"])
+    if census is not None:
+        ctx.tables.write_table(EU_CENSUS_MART, es.build_census_mart(census))
+        written.append(EU_CENSUS_MART)
+    births = staged.get(EU_TABLES["demo_fordagec"])
+    women = staged.get(EU_TABLES["demo_pjan"])
+    if births is not None and women is not None:
+        ctx.tables.write_table(EU_TFR_ORDER_MART, es.build_tfr_by_order(births, women))
+        written.append(EU_TFR_ORDER_MART)
+    births_edu = staged.get(EU_TABLES["demo_faeduc"])
+    lfs = staged.get(EU_TABLES["lfsa_pgaed"])
+    if births_edu is not None and lfs is not None:
+        ctx.tables.write_table(EU_TFR_EDU_MART, es.build_tfr_by_education(births_edu, lfs))
+        written.append(EU_TFR_EDU_MART)
+    return written, skipped

@@ -13,7 +13,8 @@
 | World Bank WDI API | GDP 成長率、出生率、人口、Gini 等（国×年） | REST JSON（`api.worldbank.org/v2`） | CC BY 4.0 | **採用**（growth-fertility） |
 | World Inequality Database (WID.world) | 所得・資産の上位シェア、人口、長期系列 | 国別 zip（`bulk_download/WID_fulldataset_<ISO2>.zip`） | **CC BY-NC-SA 4.0**（サイト表記。CC BY 4.0 は未確認） | **採用**（wealth-population-distribution） |
 | UN World Population Prospects | 人口・年齢構成・出生率 | CSV / API | CC BY 3.0 IGO | 候補 |
-| OECD Data Explorer（SDMX REST） | 最高限界所得税率（Tax Database Table I.7）、公的社会支出 %GDP（SOCX）、税収 %GDP・相続税収 %GDP（Revenue Statistics） | SDMX REST CSV（`sdmx.oecd.org/public/rest/data/...?format=csvfilewithlabels`、鍵不要） | **OECD Terms & Conditions（2024-07-01 改定）: 出典表示で商用含め自由利用。OECD 発行物は CC BY 4.0**（確認 2026-10-04） | **採用**（wealth-population-distribution H2） |
+| OECD Data Explorer（SDMX REST） | 最高限界所得税率（Tax Database Table I.7）、公的社会支出 %GDP（SOCX）、税収 %GDP・相続税収 %GDP（Revenue Statistics）；家族支出 TP51（growth-fertility H5） | SDMX REST CSV（`sdmx.oecd.org/public/rest/data/...?format=csvfilewithlabels`、鍵不要） | **OECD Terms & Conditions（2024-07-01 改定）: 出典表示で商用含め自由利用。OECD 発行物は CC BY 4.0**（確認 2026-10-04） | **採用**（wealth-population-distribution H2 / growth-fertility H5） |
+| Eurostat dissemination API（JSON-stat 2.0） | 2021 センサス 配偶関係×年齢×性×ISCED（`cens_21me_r2`）、母の年齢×出生順位の出生数（`demo_fordagec`）、女性人口（`demo_pjan`）、母の年齢×ISCED の出生数（`demo_faeduc`）、LFS 女性人口×ISCED（`lfsa_pgaed`） | REST JSON（`ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<dataset>?format=JSON&lang=EN&<dim>=<code>`、キー不要、国別リクエスト） | **Eurostat copyright notice: 出典表示で商用含め再利用可**（第三国データは別条件、本件は EU/EFTA のみ。確認 2026-10-06） | **採用**（growth-fertility H5） |
 | OECD Data Explorer（IDD 等） | 所得分配（IDD）、出生率 | SDMX API | 同上 | 候補 |
 | Maddison Project / Penn World Table | 長期 GDP 系列 | Excel/CSV | 要確認 | 候補（戦後長期） |
 | Our World in Data | 整形済み系列（出典明記） | CSV / grapher API | CC BY | 候補（検証用） |
@@ -122,6 +123,26 @@
   - ISO3 の付かない DHS 国コード（サブナショナル調査 `OS` 等）の行は落とし、stage の skipped に残す。
   - `CILow`/`CIHigh`/`DenominatorWeighted` はこの指標では全件空（None）。列は保持する。
   - 対象国は低・中所得国に偏る（高所得国の国内勾配は観測できない）。同一国の複数調査は調査種別（DHS/MIS/AIS）が混在する。
+
+### Eurostat dissemination API（JSON-stat 2.0）— 欧州の学歴別 有配偶率・出生順位別／学歴別 TFR（growth-fertility H5）
+- URL / API: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<dataset>?format=JSON&lang=EN&geo=<geo>&<dim>=<code>…`（同一次元の複数値は引数を繰り返す。`sinceTimePeriod=<year>` で開始年）。**API キー不要**。レスポンスは JSON-stat 2.0（`class: "dataset"`, `id`（次元順）, `size`, `dimension.<d>.category.index`（code→位置）, `value` は**疎な dict（文字列セル番号→値）**、`status` に欠損フラグ）。エラーは `{"error": …}` の JSON。`theme_growth_fertility.eurostat.jsonstat_rows` が各セルを次元コード dict に展開し、`value` に無いセルは出さない（補完しない）。`error` / `class != dataset` / `id`・`size`・`value` 欠落 / 次元サイズ不一致は `ValueError`（fail-closed）。
+- 採用 dataset（2026-10-06 に実レスポンスで次元コードを確認）。すべて国別に 1 リクエスト（raw `eurostat_<dataset>_<geo>.json`）:
+  | dataset | 次元（`id` 順） | 絞り込み | 対象国 | 年 |
+  |---|---|---|---|---|
+  | `cens_21me_r2` | freq.isced11.marsta.age.sex.unit.geo.time | sex=M,F; age=Y25-29…Y55-59（7 階級）; marsta=TOTAL,MAR_REP,UNK; isced11 全部（TOTAL, ED0…ED8, NAP, UNK） | EU27＋EFTA（IS NO CH LI）の 31 か国。geo は 2 文字の国コードのみ採用（NUTS 行は落とす） | 2021 |
+  | `demo_fordagec` | freq.unit.age.ord_brth.geo.time | age=Y15…Y49（1 歳刻み 35 本）＋UNK; ord_brth 全部（TOTAL,1,2,3,GE4,UNK） | FI SE NO DK IS DE FR IT ES NL HU CZ PL | 2005– |
+  | `demo_pjan` | freq.unit.age.sex.geo.time | sex=F; age=Y15…Y49 | 同上 | 2005– |
+  | `demo_faeduc` | freq.unit.age.isced11.geo.time | age=1 歳刻み Y15…Y49 ＋ 5 歳階級 Y15-19…Y45-49 ＋ UNK（国により片方しか無い。FI は 1 歳刻みのみ）; isced11 全部（TOTAL, ED0-2, ED3_4, ED5-8, NAP, UNK） | FI SE NO DK IS NL BE AT | 2007– |
+  | `lfsa_pgaed` | freq.unit.sex.age.isced11.geo.time | sex=F; age=Y15-19…Y45-49; isced11=ED0-2,ED3_4,ED5-8,TOTAL（単位 THS_PER＝千人） | 同上 | 2007– |
+- geo → ISO3 は固定辞書 `eurostat.GEO_TO_ISO3`（EU27＋EFTA＋UK。`EL`→GRC、`UK`→GBR）。pycountry は使わない。
+- ライセンス・利用規約（確認日 2026-10-06、`https://ec.europa.eu/eurostat/web/main/help/copyright-notice`）: Eurostat のデータは出典を明記すれば商用を含め自由に再利用・改変・配布できる（Commission Decision 2011/833/EU）。第三国（非 EU/EFTA）データは権利者の条件が別だが、本件は EU/EFTA のみ。出典表記: 「Source: Eurostat, <dataset>（accessed 2026-10-06）」。raw はコミットしない。
+- 取得方法: `theme_growth_fertility.eurostat`（`Request` の URL 組み立て、`jsonstat_rows`、`census_rows` 等の純粋変換、`build_census_mart` / `build_tfr_by_order` / `build_tfr_by_education` の純粋集計）＋ `pipeline._fetch_h5` / `_stage_h5` / `_mart_h5`（`HttpxFetcher`）。**73 リクエスト**（31 ＋ 13×2 ＋ 8×2、各 10KB〜数百 KB）。公開レート制限なし（Eurostat は 1 リクエストあたりセル数上限あり → 国別分割）。再取得は年 1 回程度。
+- 既知の欠損・断絶・定義変更:
+  - センサスの配偶関係は法律婚＋登録パートナー（`MAR_REP`）のみで同棲を含まない（北欧の有配偶率を過小評価）。学歴 UNK/NAP は群に入れない。`total` は TOTAL − 配偶関係 UNK。
+  - `demo_fordagec` の出生順位 UNK は TFR の順位別分解に含めず別行（`order="UNK"`）で保持。母の年齢 UNK の出生は TFR から落とし `births_age_unknown` に件数を残す。
+  - `demo_faeduc` は国により 1 歳刻みと 5 歳階級の公開が異なる。mart では 5 歳階級セルが無ければ 1 歳刻み 5 本の合計を使う（5 本そろわなければ落とす）。
+  - `lfsa_pgaed` は標本（LFS）由来で小さいセルは非公表（`value` 欠落、`status: u/b`）。分母が無く出生 > 0 の階級がある年・学歴群は落とす（補完しない）。出生 0 の階級は分母が無くても寄与 0。
+  - 出生の 2024 年値は国により未公表。学歴別出生（`demo_faeduc`）は提供国が限られる（北欧以外は試行取得し、データがあれば残す）。
 
 ## 記録テンプレート（ソース採用時）
 ```
