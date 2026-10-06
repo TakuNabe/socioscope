@@ -21,6 +21,7 @@
 | e-Stat（政府統計の総合窓口） | 国民生活基礎調査 所得票（所得階級×配偶者の有無・児童のいる世帯） | 統計表ファイル直接ダウンロード（`stat-search/file-download?statInfId=…&fileKind=1`、appId 不要） | **政府標準利用規約（第2.0版）＝CC BY 4.0 互換**（確認 2026-10-04） | **採用**（growth-fertility H3） |
 | e-Stat — 就業構造基本調査（総務省） | 令和4年 全国編 第40表: 男女×配偶関係×年齢×所得（有業者） | 統計表ファイル直接ダウンロード（`…&fileKind=0`、**Excel のみ**、appId 不要。標準ライブラリで解析） | 同上（確認 2026-10-04） | **採用**（growth-fertility H3b 年齢調整） |
 | DHS Program Indicator Data API | 調査前 3 年の TFR（15–49 歳）× 富裕五分位（`FE_FRTR_W_TFR` × Wealth quintile）、約 90 か国 1990–2025 の DHS/MIS/AIS 調査；国コード表（ISO3） | REST JSON（`api.dhsprogram.com/rest/dhs/data`, `/countries`、API キー不要） | **引用義務**（Terms: 「The DHS Program Indicator Data API, The Demographic and Health Surveys (DHS) Program. ICF. Originally funded by USAID. Available from api.dhsprogram.com. [Accessed 10-05-2026]」。確認 2026-10-05） | **採用**（growth-fertility H4） |
+| 国家データ処（韓国）新婚夫婦統計 報道資料 PDF | 初婚新婚夫婦（婚姻 5 年以内）の所得区間（6 区間＋全体）× 子ども有無・人数・平均子ども数、2015–2024 年基準 | 報道資料掲示板の静的 PDF（`mods.go.kr/boardDownload.es?bid=11815&list_no=…&seq=…`、キー不要。pypdf でテキスト抽出し表をパース） | **公共ヌリ（KOGL）第 1 類型＝出典表示のみ・商用・改変可**（確認 2026-10-06） | **採用**（growth-fertility H5） |
 | 国立社会保障・人口問題研究所 | 出生動向基本調査、将来推計人口 | CSV/Excel | 要確認 | 候補（日本） |
 | 国税庁 統計年報 / 民間給与実態統計 | 所得分布 | Excel | 政府標準利用規約 | 候補（日本） |
 | 野村総研 富裕層レポート等 | 資産階層別世帯数（推計） | PDF（公開レポート） | 引用のみ | 候補（LLM 構造化対象） |
@@ -143,6 +144,30 @@
   - `demo_faeduc` は国により 1 歳刻みと 5 歳階級の公開が異なる。mart では 5 歳階級セルが無ければ 1 歳刻み 5 本の合計を使う（5 本そろわなければ落とす）。
   - `lfsa_pgaed` は標本（LFS）由来で小さいセルは非公表（`value` 欠落、`status: u/b`）。分母が無く出生 > 0 の階級がある年・学歴群は落とす（補完しない）。出生 0 の階級は分母が無くても寄与 0。
   - 出生の 2024 年値は国により未公表。学歴別出生（`demo_faeduc`）は提供国が限られる（北欧以外は試行取得し、データがあれば残す）。
+### 国家データ処（韓国）— 신혼부부통계（新婚夫婦統計）報道資料 PDF（growth-fertility H5: 韓国の所得区間別 有子率）
+- URL / API:
+  - 掲示板: `https://mods.go.kr/board.es?mid=a10301010000&bid=11815`（報道資料。検索語「신혼부부」で各年の「<year>년 (기준) 신혼부부통계 결과」投稿を特定。2026-10-06 時点の `list_no`/`seq`（pdf 添付）は `theme_growth_fertility.kostat.RELEASES` に固定）:
+    | 基準年 | URL |
+    |---|---|
+    | 2015 | `https://mods.go.kr/boardDownload.es?bid=11815&list_no=358364&seq=5` |
+    | 2016 | `…list_no=365445&seq=15` |
+    | 2017 | `…list_no=371980&seq=2` |
+    | 2018 | `…list_no=379256&seq=10` |
+    | 2019 | `…list_no=386554&seq=2` |
+    | 2020 | `…list_no=415466&seq=2` |
+    | 2021 | `…list_no=422173&seq=1` |
+    | 2022 | `…list_no=428407&seq=3` |
+    | 2023 | `…list_no=434122&seq=3` |
+    | 2024 | `…list_no=442387&seq=3` |
+  - KOSIS OpenAPI はキー必須のため使わない。PDF は静的 URL、キー不要、各 1.5–3.7 MB。robots.txt（`https://mods.go.kr/robots.txt`、2026-10-06）: `User-agent: *` は `/ksows/wisenut/` のみ Disallow、Googlebot 向けに `/board.es?mid=b20306000000&bid=601` を Disallow。`boardDownload.es` と当該掲示板は許可。
+- 対象指標・粒度: 基準年 × 所得区間（전체 / 1천만원 미만 / 1천만~3천만 / 3천만~5천만 / 5천만~7천만 / 7천만~1억 / 1억원 이상。万ウォン単位の下限・上限に変換、上限なしは NULL）。値: 부부 수（쌍）, 자녀있음 %, 1명 %, 2명 %, 3명 이상 %, 평균 자녀 수。**母集団**: 基準年 11 月 1 日時点で婚姻 5 年以内・婚姻継続中・両者国内居住の**初婚**夫婦（`population = first_marriage_within_5y`）。**所得概念**: 夫婦合算の年間 근로＋사업소득（`income_concept = earned_business`）。**2015 年基準の断絶**: 2015 年基準報道資料は健康保険職場加入者の**賃金勤労者**夫婦（852,618 쌍）のみを所得区間別に集計 → `income_concept = wage_only`。2016 年基準資料が 2015 年を 근로＋사업소득 ベース（1,179,000 쌍）で再掲しているため、2015 年は両概念の行が存在する。各資料は前年も再掲するので、mart では (ref_year, income_concept) ごとに**最新の資料**を採用する。
+- ライセンス・利用規約（確認日 2026-10-06、`https://mods.go.kr/menu.es?mid=a10706000000` 저작권정책）: 報道資料は **공공누리（KOGL）제1유형（출처표시）**（`https://www.kogl.or.kr/info/license.do`）。出典表示のみで商用・改変可。出典表記: 「국가데이터처, 신혼부부통계（<year>년 기준）, 보도자료, mods.go.kr」。`kostat.LICENSE` に記載し manifest に残す。raw（PDF）はコミットしない。
+- 取得方法（adapter 名、レート制限）: `theme_growth_fertility.kostat`（`RELEASES`、`pdf_text`（pypdf）、`find_income_children_table`、`income_children_rows` の純粋変換）＋ `pipeline._fetch_kostat` / `_stage_kostat` / `_mart_kostat`（`HttpxFetcher`）。**10 リクエスト（計 ~22 MB）**。raw は `data/raw/growth-fertility/kostat_newlywed/newlywed_<ref_year>.pdf`、staged は `staged/kostat/newlywed_income_children`、mart は `marts/kr_newlywed_income_children`。公開レート制限なし。再取得は年 1 回（12 月の公表後）。
+- 既知の欠損・断絶・定義変更:
+  - 表のレイアウトは 3 系統（2015: 行＝所得区間・実数＋構成比、2016–2019: 行＝所得区間・構成比＋千쌍、2020–2024: 列＝所得区間・年ブロック）。`kostat.py` はこの 3 系統のみ解析し、見出し・行数・合計（区間の合計＝全体、자녀없음＋자녀있음＝100、1명＋2명＋3명 이상＝자녀있음）が合わないときは `ValueError` → stage の skipped に「`newlywed_<year>.pdf: layout not recognised (<reason>)`」として残す（補完しない）。
+  - 2016–2020 年基準資料の 부부 수 は**千쌍単位**（2016–2018 は小数 1 桁、2019–2020 は整数）→ ×1000 で쌍に換算。2021 年以降と 2015 年は実数。最新資料優先のため、mart で千쌍由来なのは 2015（earned_business）・2016・2017・2018 年の行のみ。
+  - 共稼ぎ（맞벌이）別・婚姻年次別の平均子ども数は資料にあるが未取込（任意項目）。所得は夫婦合算で、共稼ぎと所得が同時決定（`design/themes/growth-fertility.md` H5 の限界）。
+  - 2018 年基準 PDF は本文フォントが抽出で文字化けするが、表部分は正常に抽出される。
 
 ## 記録テンプレート（ソース採用時）
 ```

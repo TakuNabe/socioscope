@@ -363,7 +363,35 @@ shape: (6, 6)
   women Nordic: ISL +0.025 (positive), NOR +0.025 (positive), DNK +0.035 (positive), SWE +0.037 (positive), FIN +0.042 (positive)
   women South: ITA -0.033 (negative), GRC -0.031 (negative), ESP -0.020 (negative), PRT -0.015 (zero)
 
-== (b) Korea newlywed mart missing: skipped ==
+== (b) Korea newlywed mart: rows=462 years=[2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024] ==
+  2015 (earned_business): with_children_share ~ ln income: -0.0388 (se 0.0070) [-0.0534, -0.0243] (bands=24); mean_children: -0.0568 (se 0.0105) [-0.0786, -0.0351]
+  2016 (earned_business): with_children_share ~ ln income: -0.0449 (se 0.0128) [-0.0804, -0.0095] (bands=6); mean_children: -0.0676 (se 0.0175) [-0.1163, -0.0190]
+  2017 (earned_business): with_children_share ~ ln income: -0.0388 (se 0.0132) [-0.0753, -0.0022] (bands=6); mean_children: -0.0604 (se 0.0164) [-0.1061, -0.0148]
+  2018 (earned_business): with_children_share ~ ln income: -0.0435 (se 0.0190) [-0.0964, +0.0094] (bands=6); mean_children: -0.0701 (se 0.0271) [-0.1453, +0.0051]
+  2019 (earned_business): with_children_share ~ ln income: -0.0524 (se 0.0177) [-0.1016, -0.0033] (bands=6); mean_children: -0.0789 (se 0.0249) [-0.1479, -0.0098]
+  2020 (earned_business): with_children_share ~ ln income: -0.0449 (se 0.0154) [-0.0878, -0.0020] (bands=6); mean_children: -0.0677 (se 0.0209) [-0.1259, -0.0095]
+  2021 (earned_business): with_children_share ~ ln income: -0.0566 (se 0.0178) [-0.1062, -0.0071] (bands=6); mean_children: -0.0808 (se 0.0256) [-0.1519, -0.0097]
+  2022 (earned_business): with_children_share ~ ln income: -0.0474 (se 0.0204) [-0.1040, +0.0091] (bands=6); mean_children: -0.0727 (se 0.0234) [-0.1375, -0.0079]
+  2023 (earned_business): with_children_share ~ ln income: -0.0438 (se 0.0189) [-0.0962, +0.0086] (bands=6); mean_children: -0.0679 (se 0.0226) [-0.1305, -0.0052]
+  2024 (earned_business): with_children_share ~ ln income: -0.0435 (se 0.0209) [-0.1016, +0.0145] (bands=6); mean_children: -0.0670 (se 0.0270) [-0.1419, +0.0080]
+shape: (77, 3)
+┌──────────┬──────────────┬───────┐
+│ ref_year ┆ income_class ┆ value │
+│ ---      ┆ ---          ┆ ---   │
+│ i64      ┆ str          ┆ f64   │
+╞══════════╪══════════════╪═══════╡
+│ 2015     ┆ 1000_3000    ┆ 0.678 │
+│ 2015     ┆ 1000_3000    ┆ 0.665 │
+│ 2015     ┆ 3000_5000    ┆ 0.671 │
+│ 2015     ┆ 3000_5000    ┆ 0.679 │
+│ 2015     ┆ 5000_7000    ┆ 0.616 │
+│ …        ┆ …            ┆ …     │
+│ 2024     ┆ 5000_7000    ┆ 0.538 │
+│ 2024     ┆ 7000_10000   ┆ 0.458 │
+│ 2024     ┆ ge_10000     ┆ 0.459 │
+│ 2024     ┆ lt_1000      ┆ 0.543 │
+│ 2024     ┆ total        ┆ 0.512 │
+└──────────┴──────────────┴───────┘
 
 
 == (c1) birth-order mart: rows=1433 countries=13 years 2005-2024 ==
