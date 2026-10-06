@@ -5,12 +5,13 @@
 ## 構成
 ```
 src/theme_wealth_population_distribution/
-  wid.py                 WID.world 国別 zip の URL 組み立て、zip → CSV 抽出、CSV → 行 の純粋変換（決定的・テスト対象）
+  wid.py                 WID.world 国別 zip の URL 組み立て、zip → CSV 抽出、CSV → 行 の純粋変換（決定的・テスト対象）。`distribution_rows_from_csv` が g-percentile ブラケット＋上位テール（`staged/wid/distribution`）と閾値（`staged/wid/thresholds`）を同じ CSV から別パスで取り出す（既存の `rows_from_csv` 出力は不変）
+  distribution.py        純粋関数: `parse_percentile`, `g_percentiles`（127 コード）, `is_partition`, `lorenz_points`, `gini_from_brackets`（台形近似。一様分布 → 0、1 人集中 → ~1 をテスト）, `middle40_share`, `ratio`, `top_within_share`
   wid_iso2_to_iso3.csv   WID alpha2 → ISO3 の固定表（pycountry から生成しコミット。手で直す場合は理由をコメント）
   oecd.py                OECD SDMX REST の URL 組み立て（dataflow＋key）、CSV → 行（STRUCTURE_ID・全次元コードを照合、fail-closed）、OECD_MEMBERS（38）
   pipeline.py            fetch / stage / mart（Port 経由。I/O はここだけ）。OECD は _fetch_oecd / _stage_oecd / _mart_institutions に分離
   wiring.py              PIPELINE（entry point）
-  analysis/              report 用スクリプト（決定的、seed 固定）: a20261004_h1_ushape.py（H1）、a20261004_h1b_observed_only.py（H1b）、a20261005_h1c_quality_corrected.py（H1c: data_quality の向きを正した感度分析＋品質ヒートマップ）、a20261004_h2_institutions.py（H2）、s20261005_summary.py（総括: H1/H1b/H1c/H2 を同じ純粋関数から再計算して日本語の一般向け図 14 枚を `reports/figures/summary/` に出力。日本語フォントは Hiragino 等を自動検出）
+  analysis/              report 用スクリプト（決定的、seed 固定）: a20261004_h1_ushape.py（H1）、a20261004_h1b_observed_only.py（H1b）、a20261005_h1c_quality_corrected.py（H1c: data_quality の向きを正した感度分析＋品質ヒートマップ）、a20261004_h2_institutions.py（H2）、a20261005_h4_superrich_dispersion.py（H4a/H4b: 上位 0.1%/0.01% へのトップ内集中、Gini・中位 40%・P90/P50・P50/P10 の 1980 年以降の変化、日本 vs 中央値。事前登録 2026-10-05）、s20261005_summary.py（総括: H1/H1b/H1c/H2 を同じ純粋関数から再計算して日本語の一般向け図 14 枚を `reports/figures/summary/` に出力。日本語フォントは Hiragino 等を自動検出）
 tests/                   fixtures/wid_data_sample.csv, wid_metadata_sample.csv（合成の数行）、fixtures/oecd_*_sample.csv（実レスポンスの JPN 数行）＋ Fake による状態テスト
 ```
 
@@ -18,7 +19,8 @@ tests/                   fixtures/wid_data_sample.csv, wid_metadata_sample.csv�
 WID.world を採用し fetch/stage/mart 実装済み（ライセンスは **CC BY-NC-SA 4.0** 扱い、`design/data-sources.md` 参照）。
 OECD SDMX（最高税率・社会支出・税収・相続税収）を H2 用に採用し fetch/stage/mart 実装済み（OECD Terms & Conditions 2024、出典表示で自由利用）。
 H1 report: `reports/2026-10-04-h1-ushape.md`（追補: H1b `2026-10-04-h1b-observed-only.md` 観測年のみ、H1c `2026-10-05-h1c-quality-corrected.md` data_quality 向き訂正）。H2 report（限定・関連のみ）: `reports/2026-10-04-h2-institutions.md`。
-**総括（一般向け・日本語、全レポートの要約＋図 14 枚）**: `reports/2026-10-05-summary-wealth-population-distribution.md`（`analysis/s20261005_summary.py`、数値は元レポートの stdout と一致）。
+H4 report（超富裕層と分布全体、事前登録 2026-10-05・実行 2026-10-06）: `reports/2026-10-05-h4-superrich-dispersion.md`（`analysis/a20261005_h4_superrich_dispersion.py`、図 `figures/h4_*.png` 6 枚）。
+**総括（一般向け・日本語、全レポートの要約＋図 17 枚）**: `reports/2026-10-05-summary-wealth-population-distribution.md`（`analysis/s20261005_summary.py`、数値は元レポートの stdout と一致。s15–s17 は H4 の「結果 6」用、s01–s14 は H4 追加前と sha256 一致）。
 World Bank Gini、UN WPP 等は未接続。
 
 ## 実行
@@ -35,7 +37,9 @@ uv run socioscope run wealth-population-distribution mart                # 両 m
 | `staged/wid/population` | iso3×year | iso3, year, value (人), data_quality, source |
 | `staged/wid/metadata` | iso3×variable | iso3, variable (`sptinc992j`/`shweal992j`/`npopul999i`), shortname, unit, source_text (WID の `source` 列: 文献・URL), method (WID の `method` 自由記述), avg_quality (float / None), source |
 | `staged/wid/data_points` | iso3×variable×year（`top_shares` にある年） | iso3, year, variable, is_observed (bool / None=不明), construction (`observed`/`partial`/`imputed`/None), basis (`method_by_year` / `trend_before_YYYY` / `long_run_before_YYYY` / None), method_segment (年別記述の原文 / None), source |
-| `marts/wealth_population_panel` | iso3×year | iso3, year, top1_income_share, top10_income_share, bottom50_income_share, top1_wealth_share, top10_wealth_share, population, source, top1_income_observed (bool/null), top1_wealth_observed (bool/null) |
+| `staged/wid/distribution` | iso3×year×variable×percentile | iso3, year, variable (`sptinc992j` / `shweal992j`), percentile (WID の一般化百分位 127 ブラケット `p0p1 … p98p99, p99p99.1 … p99.8p99.9, p99.9p99.91 … p99.98p99.99, p99.99p99.991 … p99.998p99.999, p99.999p100` ＋ 上位テール `p99.9p100`, `p99.99p100`), p_lower, p_upper (0–100), share (0–1、資産の下位は負あり), data_quality, source。`distribution.g_percentiles()` が 127 コードを生成 |
+| `staged/wid/thresholds` | iso3×year×variable×percentile | iso3, year, variable (`tptinc992j` / `thweal992j`), percentile (int 10/50/90/99), percentile_code (`p10p11` / `p50p51` / `p90p91` / `p99p99.1`: WID はブラケット pXpY の閾値を X の値として持つ), value, unit (`local currency, constant prices`), data_quality, source |
+| `marts/wealth_population_panel` | iso3×year | iso3, year, top1_income_share, top10_income_share, bottom50_income_share, top1_wealth_share, top10_wealth_share, population, source, top1_income_observed (bool/null), top1_wealth_observed (bool/null), **H4 列（2026-10-05 追加、既存列の後ろ）**: top01_income_share (p99.9p100), top001_income_share (p99.99p100), top01_wealth_share, top001_wealth_share, gini_income, gini_wealth (127 ブラケットのローレンツ曲線の台形近似。127 揃わない・合計が 1±0.02 を外れる国×年は null), middle40_income_share, middle40_wealth_share (= 1 − p0p50 − p90p100), p90_p50_income, p50_p10_income, p90_p50_wealth, p50_p10_wealth (閾値比。分母 ≤ 0 は null) |
 | `staged/oecd/<indicator>`（`top_pit_rate`, `social_expenditure_gdp`, `tax_revenue_gdp`, `inheritance_tax_rev_gdp`） | iso3×year | iso3, year, value (%), unit (SDMX コード `PT_WG_EARN_G` / `PT_B1GQ`), obs_status, source (`oecd`) |
 | `marts/wealth_institutions_panel` | iso3×year（OECD 38、1980–） | iso3, year, top1_income_share, top10_income_share, top1_wealth_share, top10_wealth_share, top1_income_quality, top1_wealth_quality (WID data_quality), top1_income_observed, top1_wealth_observed (bool/null, panel から転記), top_pit_rate, social_expenditure_gdp, tax_revenue_gdp, inheritance_tax_rev_gdp, source (`wid_world+oecd`) |
 | `staged/worldbank/gini`（予定） | iso3×year | iso3, country, year, value, indicator, source |
@@ -50,3 +54,4 @@ uv run socioscope run wealth-population-distribution mart                # 両 m
 - **`data_quality`（0–5）の意味は WID 非公開**（`design/data-sources.md`）。本データの経験則（2026-10-04, H1b レポート）: **高いほど一次データに近い**（USA DINA 1962 年以降 = 5、SAU/JPN 資産の全年 = 0、DEU 資産は調査年 4・その間 0）。所得の observed 年は q3–5 のみだが、q3 以上でも imputed 年が多い。感度分析では「q ≤ 1（または 0）を落とす」向きで使う。旧記述「4〜5 は推計・外挿」は誤りだった（H1 レポートの該当変種は向きが逆、数値は参考値として据え置き）。正しい向きの再計算は H1c レポート（`a20261005_h1c_quality_corrected.py`、`mask_quality`）: 資産は国×年の 70% が q0 で q ≤ 1 を落とすと適格国 46 → 8（層別できない）、所得は 1980 年以前が q3 中心。JPN 所得は 1980 年以前 q4・以後 q1 で metadata の construction（1980 年以前 imputed）と食い違う。品質の国×年ヒートマップは `reports/figures/h1c_quality_heatmap_top1_{wealth,income}.png`。
 - **OECD**: 対象は `oecd.OECD_MEMBERS` の 38 か国のみ（dataflow に含まれる集計・非加盟国は stage で捨てる）。raw は `data/raw/wealth-population-distribution/oecd/<indicator>.csv`（1 indicator 1 リクエスト、計 4）。`OBS_VALUE` 空は行ごと落とす。最高税率は SDMX に 2000 年以降しか無い（1981–1999 の Excel は robots.txt で Disallow のため使わない）。`--only <source>` は `Context.sources`（core）で実装、mart は無視する。
 - 資産統計はソース・年代で定義が異なる。断絶の説明は `staged/wid/metadata` の `source_text`/`method` にある。
+- **H4 の分位データ（2026-10-06 に実ファイルで照合）**: WID の g-percentile は 1 年あたり 387 コードのうち 127 が連続ブラケット（`distribution.g_percentiles()`）。閾値変数 `tptinc992j` / `thweal992j` はブラケット `pXpY` の下限値で、`p10p11` = `p10p100`（同値）。資産の P10 は 57% が ≤ 0、所得の P10 は中南米等で事実上 0 なので **P50/P10 は主指標にしない**（H4 レポート b6）。Gini は 127 ブラケットの台形近似（公式 Gini と定義が異なる）。再取得した zip の sha256 は 2026-10-04 の manifest 記録と同一。fetch は非 zip 応答で fail-closed（`wid.is_zip_payload`）。

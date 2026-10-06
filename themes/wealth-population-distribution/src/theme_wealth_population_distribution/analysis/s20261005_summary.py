@@ -30,6 +30,7 @@ import polars as pl
 from theme_wealth_population_distribution.analysis import a20261004_h1_ushape as h1
 from theme_wealth_population_distribution.analysis import a20261004_h1b_observed_only as h1b
 from theme_wealth_population_distribution.analysis import a20261004_h2_institutions as h2
+from theme_wealth_population_distribution.analysis import a20261005_h4_superrich_dispersion as h4
 
 THEME_DIR = Path(__file__).resolve().parents[3]
 REPO_ROOT = THEME_DIR.parents[1]
@@ -986,6 +987,208 @@ def fig_method(path: Path) -> None:
     _save(fig, path, "分析: socioscope（H1・H1b・H1c レポートの手順）")
 
 
+# ---------------------------------------------------------------- H4 (結果 6) figures
+H4_LABEL: dict[str, str] = {
+    "top1_income_share": "上位 1% 所得シェア",
+    "top01_income_share": "上位 0.1% 所得シェア",
+    "gini_income": "Gini（WID、台形近似）",
+    "p90_p50_income": "P90 / P50（所得）",
+}
+STACK_JA: tuple[str, ...] = ("JPN", "USA", "FRA", "DEU", "SWE", "GBR")
+
+
+def ratio_series(panel: pl.DataFrame, fine: str, coarse: str) -> pl.DataFrame:
+    """iso3×year の fine/coarse（例 top0.1/top1）。どちらか欠損・分母 ≤ 0 の年は落とす。"""
+    return (
+        panel.filter(pl.col(fine).is_not_null() & (pl.col(coarse) > 0))
+        .select("iso3", "year", (pl.col(fine) / pl.col(coarse)).alias("ratio"))
+        .sort(["iso3", "year"])
+    )
+
+
+def fig15_top1_vs_top01(panel: pl.DataFrame, path: Path) -> None:
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+
+    lo, hi = h1.BASE.window
+    ratio = ratio_series(panel, "top01_income_share", "top1_income_share")
+    panels: tuple[tuple[str, pl.DataFrame, str], ...] = (
+        ("top1_income_share", panel, H4_LABEL["top1_income_share"]),
+        ("top01_income_share", panel, H4_LABEL["top01_income_share"]),
+        ("ratio", ratio, "上位 1% の中で上位 0.1% が占める割合"),
+    )
+    fig, axes = plt.subplots(1, 3, figsize=(10.5, 4.2))
+    codes = sorted(panel["iso3"].unique().to_list())
+    for ax, (col, df, label) in zip(axes, panels, strict=True):
+        for iso3 in codes:
+            if iso3 == JAPAN:
+                continue
+            obs = h1.series_in_window(df, iso3, col, (lo, hi))
+            ax.plot([y for y, _ in obs], [v for _, v in obs], color=FIELD, linewidth=0.6, zorder=1)
+        med = median_by_year(df, col, (lo, hi))
+        ax.plot(med["year"], med["median"], color=INK, linewidth=1.8, zorder=2)
+        jp = h1.series_in_window(df, JAPAN, col, (lo, hi))
+        ax.plot([y for y, _ in jp], [v for _, v in jp], color=ORANGE, linewidth=2.4, zorder=3)
+        m80 = med.filter(pl.col("year") == 1980)
+        mlast = med.row(-1, named=True)
+        jp80 = dict(jp).get(1980, float("nan"))
+        print(
+            f"  s15 {col}: JPN 1980={jp80:.3f} {jp[-1][0]}={jp[-1][1]:.3f}; "
+            f"median 1980={float(m80['median'][0]) if m80.height else float('nan'):.3f} "
+            f"{mlast['year']}={mlast['median']:.3f} (n={mlast['n']})"
+        )
+        ax.set_title(label, fontsize=10, color=INK, loc="left")
+        ax.set_xlabel("年", fontsize=9)
+        _pct(ax)
+        _style(ax)
+    handles = [
+        Line2D([], [], color=ORANGE, linewidth=2.4, label="日本"),
+        Line2D([], [], color=INK, linewidth=1.8, label="46 か国の中央値（その年に値がある国）"),
+        Line2D([], [], color=FIELD, linewidth=1, label="他の 45 か国"),
+    ]
+    fig.legend(
+        handles=handles,
+        loc="lower right",
+        ncol=3,
+        frameon=False,
+        fontsize=8,
+        bbox_to_anchor=(0.99, 0.035),
+    )
+    fig.suptitle(
+        "上位 1% の上昇は、その中の上位 0.1% にどれだけ集中したか: 日本 vs 46 か国",
+        fontsize=11,
+        color=INK,
+        x=0.01,
+        ha="left",
+    )
+    fig.tight_layout(rect=(0, 0.1, 1, 0.94))
+    _save(
+        fig,
+        path,
+        SRC_WID + "　上位 0.1% は WID がパレート補間で推計した値。税引前国民所得、成人・均等割",
+    )
+
+
+def fig16_who_holds_what(panel: pl.DataFrame, path: Path) -> None:
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Patch
+
+    labels = ("下位 50%", "中間 40%", "次の 9%", "上位 1%")
+    colors = (SEQ_BLUE[0], SEQ_BLUE[2], SEQ_BLUE[4], ORANGE)
+    ch = h4.long_change(panel, "top1_income_share")
+    fig, ax = plt.subplots(figsize=(10.0, 4.8))
+    x = 0.0
+    ticks: list[tuple[float, str]] = []
+    for iso3 in STACK_JA:
+        row = ch.filter(pl.col("iso3") == iso3)
+        if row.is_empty():
+            continue
+        r = row.row(0, named=True)
+        for y in (r["year0"], r["year1"]):
+            p = panel.filter((pl.col("iso3") == iso3) & (pl.col("year") == y)).row(0, named=True)
+            g = income_groups(
+                p["top1_income_share"], p["top10_income_share"], p["bottom50_income_share"]
+            )
+            vals = (g["下位 50%"], g["中間 40%"], g["次の 9%"], g["上位 1%"])
+            print(f"  s16 {iso3} {y}: " + ", ".join(f"{k}={v:.3f}" for k, v in g.items()))
+            bottom = 0.0
+            for v, c in zip(vals, colors, strict=True):
+                ax.bar(x, v, bottom=bottom, color=c, width=0.8, edgecolor="white", linewidth=0.5)
+                ax.text(x, bottom + v / 2, f"{v * 100:.0f}", ha="center", va="center", fontsize=7)
+                bottom += v
+            ticks.append((x, str(y)))
+            x += 1
+        ax.text(
+            x - 1.5,
+            -0.09,
+            COUNTRY_JA.get(iso3, iso3),
+            ha="center",
+            va="top",
+            fontsize=9,
+            color=ORANGE if iso3 == JAPAN else INK,
+            fontweight="bold" if iso3 == JAPAN else "normal",
+        )
+        x += 0.6
+    ax.set_xticks([t for t, _ in ticks])
+    ax.set_xticklabels([lab for _, lab in ticks], fontsize=8)
+    ax.set_ylim(0, 1)
+    _pct(ax)
+    ax.set_ylabel("所得全体に占める割合", fontsize=9)
+    ax.legend(
+        handles=[Patch(facecolor=c, label=lab) for lab, c in zip(labels, colors, strict=True)],
+        loc="upper left",
+        bbox_to_anchor=(1.0, 1.0),
+        frameon=False,
+        fontsize=8.5,
+    )
+    _style(ax)
+    ax.set_title(
+        "誰が何を持っているか: 所得の 4 層のシェア、1980 年ごろ vs 最新年",
+        fontsize=11,
+        color=INK,
+        loc="left",
+    )
+    fig.tight_layout(rect=(0, 0.03, 0.86, 1))
+    _save(fig, path, SRC_WID + "　数字は所得全体に対する %。1980 年に値が無い国は最も近い年")
+
+
+def fig17_gini_p90p50(panel: pl.DataFrame, path: Path) -> None:
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+
+    lo, hi = h1.BASE.window
+    cols = ("gini_income", "p90_p50_income")
+    fig, axes = plt.subplots(1, 2, figsize=(9.5, 4.2))
+    codes = sorted(panel["iso3"].unique().to_list())
+    for ax, col in zip(axes, cols, strict=True):
+        for iso3 in codes:
+            if iso3 == JAPAN:
+                continue
+            obs = h1.series_in_window(panel, iso3, col, (lo, hi))
+            ax.plot([y for y, _ in obs], [v for _, v in obs], color=FIELD, linewidth=0.6, zorder=1)
+        med = median_by_year(panel, col, (lo, hi))
+        if med.height:
+            ax.plot(med["year"], med["median"], color=INK, linewidth=1.8, zorder=2)
+        jp = h1.series_in_window(panel, JAPAN, col, (lo, hi))
+        ax.plot([y for y, _ in jp], [v for _, v in jp], color=ORANGE, linewidth=2.4, zorder=3)
+        if jp and med.height:
+            mlast = med.row(-1, named=True)
+            print(
+                f"  s17 {col}: JPN {jp[0][0]}={jp[0][1]:.3f} {jp[-1][0]}={jp[-1][1]:.3f}; "
+                f"median {mlast['year']}={mlast['median']:.3f} (n={mlast['n']})"
+            )
+        ax.set_title(H4_LABEL[col], fontsize=10, color=INK, loc="left")
+        ax.set_xlabel("年", fontsize=9)
+        _style(ax)
+    handles = [
+        Line2D([], [], color=ORANGE, linewidth=2.4, label="日本"),
+        Line2D([], [], color=INK, linewidth=1.8, label="46 か国の中央値（その年に値がある国）"),
+        Line2D([], [], color=FIELD, linewidth=1, label="他の国"),
+    ]
+    fig.legend(
+        handles=handles,
+        loc="lower right",
+        ncol=3,
+        frameon=False,
+        fontsize=8,
+        bbox_to_anchor=(0.99, 0.035),
+    )
+    fig.suptitle(
+        "分布全体で見る: 所得の Gini と「上位 1 割と真ん中の人の差」（P90/P50）、日本 vs 中央値",
+        fontsize=11,
+        color=INK,
+        x=0.01,
+        ha="left",
+    )
+    fig.tight_layout(rect=(0, 0.1, 1, 0.94))
+    _save(
+        fig,
+        path,
+        SRC_WID
+        + "　Gini は WID の 127 ブラケットから台形近似で算出（公式統計の Gini とは定義が異なる）",
+    )
+
+
 # ---------------------------------------------------------------- main
 def run(data_dir: Path, fig_dir: Path) -> None:
     font = configure_matplotlib()
@@ -1100,6 +1303,14 @@ def run(data_dir: Path, fig_dir: Path) -> None:
     fig_h2_coefs(rows, fig_dir / "s13_h2_coefficients.png")
     print("== fig14 method ==")
     fig_method(fig_dir / "s14_method_flow.png")
+
+    # 結果 6（H4、2026-10-05 追加）: s15–s17 は H4 スクリプトと同じ純粋関数・同じ mart 列から再計算
+    print("== fig15 top1 vs top0.1 ==")
+    fig15_top1_vs_top01(panel, fig_dir / "s15_top1_vs_top01_japan_vs_field.png")
+    print("== fig16 who holds what ==")
+    fig16_who_holds_what(panel, fig_dir / "s16_who_holds_what_stacked.png")
+    print("== fig17 gini / p90p50 ==")
+    fig17_gini_p90p50(panel, fig_dir / "s17_gini_p90p50_japan_vs_median.png")
 
 
 def main() -> None:

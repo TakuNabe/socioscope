@@ -141,6 +141,8 @@ def test_stage_oecd_writes_one_table_per_indicator_and_mart_joins_institutions()
         "staged/wid/top_shares",
         "staged/wid/metadata",
         "staged/wid/data_points",
+        "staged/wid/distribution",
+        "staged/wid/thresholds",
     )
     socx = ctx.tables.read_table("staged/oecd/social_expenditure_gdp")
     assert [(r["iso3"], r["year"], r["value"]) for r in socx] == [
@@ -246,7 +248,7 @@ def test_stage_then_mart_build_panel_from_raw() -> None:
         ("JPN", 2000),
         ("JPN", 2001),
     ]
-    assert panel[2] == {
+    assert without_h4(panel[2]) == {
         "iso3": "JPN",
         "year": 2000,
         "top1_income_share": 0.0999,
@@ -290,7 +292,7 @@ def test_build_panel_keeps_missing_as_none() -> None:
         },
     ]
     population = [{"iso3": "JPN", "year": 2001, "value": 100.0}]
-    assert build_panel(shares, population) == [
+    assert [without_h4(r) for r in build_panel(shares, population)] == [
         {
             "iso3": "JPN",
             "year": 2000,
@@ -339,6 +341,8 @@ def test_stage_writes_metadata_and_data_points_and_mart_gets_observed_flags() ->
         "staged/wid/top_shares",
         "staged/wid/metadata",
         "staged/wid/data_points",
+        "staged/wid/distribution",
+        "staged/wid/thresholds",
     )
     meta_rows = ctx.tables.read_table("staged/wid/metadata")
     assert [(m["iso3"], m["variable"]) for m in meta_rows] == [
@@ -394,7 +398,7 @@ def test_build_panel_observed_columns_default_to_none_and_keep_column_order() ->
         [share], [], [{"iso3": "JPN", "year": 2000, "variable": "sptinc992j", "is_observed": True}]
     )
     assert panel[0]["top1_income_observed"] is True and panel[0]["top1_wealth_observed"] is None
-    assert list(panel[0]) == [
+    assert list(panel[0])[:11] == [
         "iso3",
         "year",
         "top1_income_share",
@@ -407,3 +411,173 @@ def test_build_panel_observed_columns_default_to_none_and_keep_column_order() ->
         "top1_income_observed",
         "top1_wealth_observed",
     ]
+
+
+# ---------------------------------------------------------------- distribution / thresholds (H4)
+def g_partition(
+    iso3: str, year: int, variable: str, shares: dict[str, float]
+) -> list[dict[str, object]]:
+    """127 g-percentile rows; `shares` fixes specific codes, the rest spread the remainder
+    proportionally to bracket width (uniform density -> Gini 0 when nothing is fixed)."""
+    from theme_wealth_population_distribution import distribution as d
+
+    codes = d.g_percentiles()
+    bounds = {c: d.parse_percentile(c) for c in codes}
+    rest_width = sum(b[1] - b[0] for c, b in bounds.items() if b is not None and c not in shares)
+    remainder = 1.0 - sum(shares.values())
+    out: list[dict[str, object]] = []
+    for c in codes:
+        lo, hi = bounds[c]  # type: ignore[misc]
+        out.append(
+            {
+                "iso3": iso3,
+                "year": year,
+                "variable": variable,
+                "percentile": c,
+                "p_lower": lo,
+                "p_upper": hi,
+                "share": shares.get(c, remainder * (hi - lo) / rest_width),
+                "data_quality": 1,
+                "source": "wid_world",
+            }
+        )
+    return out
+
+
+def without_h4(row: dict[str, object]) -> dict[str, object]:
+    """The pre-H4 view of a mart row (first 11 columns), for the older exact-equality tests."""
+    return {k: v for k, v in row.items() if k not in H4_COLUMNS}
+
+
+def share(variable: str, percentile: str, value: float) -> dict[str, object]:
+    return {
+        "iso3": "JPN",
+        "year": 2000,
+        "variable": variable,
+        "percentile": percentile,
+        "value": value,
+    }
+
+
+def tail(variable: str, percentile: str, lo: float, value: float) -> dict[str, object]:
+    return {
+        "iso3": "JPN",
+        "year": 2000,
+        "variable": variable,
+        "percentile": percentile,
+        "p_lower": lo,
+        "p_upper": 100.0,
+        "share": value,
+    }
+
+
+def threshold(variable: str, percentile: int, value: float) -> dict[str, object]:
+    return {
+        "iso3": "JPN",
+        "year": 2000,
+        "variable": variable,
+        "percentile": percentile,
+        "value": value,
+    }
+
+
+H4_COLUMNS = [
+    "top01_income_share", "top001_income_share", "top01_wealth_share", "top001_wealth_share",
+    "gini_income", "gini_wealth", "middle40_income_share", "middle40_wealth_share",
+    "p90_p50_income", "p50_p10_income", "p90_p50_wealth", "p50_p10_wealth",
+]  # fmt: skip
+
+
+def test_build_panel_appends_h4_columns_after_existing_ones_and_keeps_none() -> None:
+    shares = [
+        share("sptinc992j", "p99p100", 0.10),
+        share("sptinc992j", "p90p100", 0.40),
+        share("sptinc992j", "p0p50", 0.19),
+        share("shweal992j", "p90p100", 0.58),
+        share("shweal992j", "p0p50", 0.05),
+    ]
+    dist = [
+        tail("sptinc992j", "p99.9p100", 99.9, 0.03),
+        tail("sptinc992j", "p99.99p100", 99.99, 0.008),
+        tail("shweal992j", "p99.9p100", 99.9, 0.09),
+        # uniform partition -> Gini 0 for income; wealth partition incomplete (126 rows) -> None
+        *g_partition("JPN", 2000, "sptinc992j", {}),
+        *g_partition("JPN", 2000, "shweal992j", {})[:-1],
+    ]
+    thresholds = [
+        threshold("tptinc992j", 10, 100.0),
+        threshold("tptinc992j", 50, 300.0),
+        threshold("tptinc992j", 90, 900.0),
+        threshold("thweal992j", 50, 10.0),
+        threshold("thweal992j", 10, -5.0),
+    ]
+    panel = build_panel(shares, [], None, dist, thresholds)
+    assert list(panel[0])[11:] == H4_COLUMNS
+    r = panel[0]
+    assert r["top01_income_share"] == 0.03 and r["top001_income_share"] == 0.008
+    assert r["top01_wealth_share"] == 0.09 and r["top001_wealth_share"] is None
+    assert r["gini_income"] == pytest.approx(0.0, abs=1e-9) and r["gini_wealth"] is None
+    assert r["middle40_income_share"] == pytest.approx(0.41)
+    assert r["middle40_wealth_share"] == pytest.approx(0.37)
+    assert r["p90_p50_income"] == pytest.approx(3.0) and r["p50_p10_income"] == pytest.approx(3.0)
+    assert r["p90_p50_wealth"] is None and r["p50_p10_wealth"] is None  # p90 missing / p10 <= 0
+    # without the new tables every tail/gini/ratio column is None and old columns are untouched
+    old = build_panel(shares, [])
+    assert all(old[0][c] is None for c in H4_COLUMNS if "middle40" not in c)
+    assert old[0]["top1_income_share"] == 0.10
+
+
+def test_build_panel_gini_is_none_when_partition_shares_do_not_sum_to_one() -> None:
+    dist = g_partition("JPN", 2000, "sptinc992j", {})
+    for r in dist[:10]:
+        r["share"] = 0.5  # total far above 1 -> inconsistent -> None, not an exception
+    panel = build_panel([], [], None, dist, [])
+    assert panel[0]["gini_income"] is None
+
+
+def test_stage_writes_distribution_and_thresholds_and_mart_fills_h4_columns() -> None:
+    ctx = make_ctx({wid.country_zip_url("JP"): country_zip("JP", FIXTURE)})
+    PIPELINE.run(Stage.FETCH, ctx)
+    staged = PIPELINE.run(Stage.STAGE, ctx)
+    assert staged.written == (
+        "staged/wid/population",
+        "staged/wid/top_shares",
+        "staged/wid/metadata",
+        "staged/wid/data_points",
+        "staged/wid/distribution",
+        "staged/wid/thresholds",
+    )
+    dist = ctx.tables.read_table("staged/wid/distribution")
+    assert [r["percentile"] for r in dist] == ["p0p1", "p99.9p100", "p99.99p100", "p99.999p100"]
+    th = ctx.tables.read_table("staged/wid/thresholds")
+    assert [(r["variable"], r["percentile"]) for r in th] == [
+        ("thweal992j", 50),
+        ("tptinc992j", 10),
+        ("tptinc992j", 50),
+        ("tptinc992j", 90),
+        ("tptinc992j", 99),
+    ]
+    mart = PIPELINE.run(Stage.MART, ctx)
+    assert mart.written == ("marts/wealth_population_panel",) and mart.notes == ()
+    panel = ctx.tables.read_table("marts/wealth_population_panel")
+    r = panel[0]
+    assert r["year"] == 2000 and r["top1_income_share"] == 0.0999  # existing column intact
+    assert r["top01_income_share"] == 0.03 and r["top001_income_share"] == 0.008
+    assert r["gini_income"] is None  # fixture has no full partition
+    assert r["middle40_income_share"] == pytest.approx(0.41)
+    assert r["p90_p50_income"] == pytest.approx(2.5)
+    assert r["p50_p10_income"] == pytest.approx(3000000 / 900000)
+    assert r["p90_p50_wealth"] is None
+    assert panel[1]["top01_income_share"] is None  # 2001 has no tail row
+
+
+def test_mart_without_distribution_tables_leaves_h4_columns_null_with_note() -> None:
+    ctx = make_ctx({})
+    shares, population = wid.rows_from_csv(FIXTURE)
+    ctx.tables.write_table("staged/wid/top_shares", shares)
+    ctx.tables.write_table("staged/wid/population", population)
+    result = PIPELINE.run(Stage.MART, ctx)
+    assert any("staged/wid/distribution" in n for n in result.notes)
+    panel = ctx.tables.read_table("marts/wealth_population_panel")
+    assert all(p["top01_income_share"] is None and p["gini_income"] is None for p in panel)
+    assert panel[0]["middle40_income_share"] == pytest.approx(0.41)  # needs only top_shares
