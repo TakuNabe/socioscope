@@ -1,7 +1,7 @@
 """総括レポート（note.com 向け、日本語・一般読者）用の図を生成する決定的スクリプト。
 
-H1〜H4 の 5 レポートの数値を、同じ mart から**再計算**して 15 枚の図にする（新しい推定は行わない。
-既存スクリプト a20261004_h1 / h2 / h3 / h3b / a20261005_h4 の関数を import して同じ仕様で再計算し、
+H1〜H5 の 6 レポートの数値を、同じ mart から**再計算**して 18 枚の図にする（新しい推定は行わない。
+既存スクリプト a20261004_h1 / h2 / h3 / h3b / a20261005_h4 / a20261006_h5 の関数で再計算し、
 標準出力に数値を出す。乱数は使わない）。
 
     uv run python themes/growth-fertility/src/theme_growth_fertility/analysis/s20261005_summary.py \
@@ -32,6 +32,7 @@ from theme_growth_fertility.analysis import a20261004_h2_growth_shocks as h2
 from theme_growth_fertility.analysis import a20261004_h3_jp_income_class as h3
 from theme_growth_fertility.analysis import a20261004_h3b_age_adjusted as h3b
 from theme_growth_fertility.analysis import a20261005_h4_stage_vs_gdp as h4
+from theme_growth_fertility.analysis import a20261006_h5_europe_korea_policy as h5
 
 THEME_DIR = Path(__file__).resolve().parents[3]
 REPO_ROOT = THEME_DIR.parents[1]
@@ -39,6 +40,10 @@ PANEL = Path("marts") / "growth_fertility_panel.parquet"
 JP_MART = Path("marts") / "jp_income_class_fertility.parquet"
 AGE_MART = Path("marts") / "jp_income_age_marital.parquet"
 DHS_MART = Path("marts") / "dhs_tfr_by_wealth_quintile.parquet"
+SPEND_MART = Path("marts") / "oecd_family_spending.parquet"
+CENSUS_MART = Path("marts") / "eu_census_marital_by_education.parquet"
+ORDER_MART = Path("marts") / "eu_tfr_by_birth_order.parquet"
+KR_MART = Path("marts") / "kr_newlywed_income_children.parquet"
 
 PREFERRED_FONTS = (
     "Hiragino Sans",
@@ -58,6 +63,19 @@ SRC_ESTAT_SHUGYO = (
 )
 SRC_BOTH = "出典: World Bank WDI (CC BY 4.0) / e-Stat 国民生活基礎調査を加工　分析: socioscope"
 SRC_DHS = "出典: The DHS Program Indicator Data API (ICF) / World Bank WDI　分析: socioscope"
+SRC_SOCX = "出典: OECD SOCX（家族関連公的支出）/ World Bank WDI　分析: socioscope"
+SRC_EUROSTAT = "出典: Eurostat（cens_21me_r2 / demo_fordagec / demo_pjan）　分析: socioscope"
+SRC_KOSTAT = "出典: 国家データ処（韓国）新婚夫婦統計 報道資料（KOGL 第1類型）　分析: socioscope"
+SRC_ORDERS_KOSTAT = (
+    "出典: Eurostat（demo_fordagec / demo_pjan）/ 国家データ処（韓国）新婚夫婦統計 報道資料"
+    + "　分析: socioscope"
+)
+EU_NAMES_JA = {
+    "FIN": "フィンランド", "SWE": "スウェーデン", "NOR": "ノルウェー", "DNK": "デンマーク",
+    "ISL": "アイスランド",
+    "ITA": "イタリア", "ESP": "スペイン", "PRT": "ポルトガル", "GRC": "ギリシャ", "FRA": "フランス",
+    "DEU": "ドイツ", "NLD": "オランダ", "POL": "ポーランド", "CZE": "チェコ", "HUN": "ハンガリー",
+}  # fmt: skip
 BAND_NAMES_JA = {
     "U5MR 0-10": "5歳未満死亡率 10 未満",
     "U5MR 10-25": "10〜25",
@@ -1043,6 +1061,170 @@ def fig15_dhs_quintiles(
     _save(fig, path, SRC_DHS)
 
 
+def fig16_policy(res: dict[str, h1.Est], d: pl.DataFrame, path: Path) -> None:
+    plt = _plt()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.6))
+    rows = [
+        ("家族支出 合計", res["total"].coefs["family_total"], BLUE),
+        ("うち現金給付（児童手当・育休給付）", res["split"].coefs["cash"], BLUE_RAMP[1]),
+        ("うち現物給付（保育など）", res["split"].coefs["inkind"], BLUE_RAMP[1]),
+    ]
+    _ci_dots(ax1, [(lab, b, lo, hi, c) for lab, (b, _, lo, hi), c in rows])
+    ax1.set_ylim(-0.6, 2.6)
+    ax1.set_xlabel(
+        "支出が GDP 比 1 ポイント増えると TFR は何人変わるか\n"
+        f"二元固定効果、n={res['total'].n:,}、{res['total'].countries} か国、1980–2021 年"
+    )
+    ax1.set_title(
+        "同じ国の中では、家族支出と出生率の関連は小さい（95% 信頼区間）",
+        fontsize=10.5,
+        loc="left",
+    )
+    x, y = d["spend_start"].to_numpy(), d["d_tfr"].to_numpy()
+    colors = [
+        ORANGE if c in h5.NORDIC5 else (GREEN if c in ("KOR", "JPN") else BLUE)
+        for c in d["iso3"].to_list()
+    ]
+    ax2.scatter(x, y, s=24, color=colors, edgecolors="none", alpha=0.85)
+    for iso3, xi, yi in zip(d["iso3"].to_list(), x, y, strict=True):
+        if iso3 in h5.NORDIC5 or iso3 in ("KOR", "JPN", "HUN", "CZE", "USA", "FRA", "DEU"):
+            ax2.annotate(
+                EU_NAMES_JA.get(
+                    iso3, {"KOR": "韓国", "JPN": "日本", "USA": "米国"}.get(iso3, iso3)
+                ),
+                (xi, yi),
+                fontsize=8,
+                color=INK,
+                xytext=(4, 2),
+                textcoords="offset points",
+            )
+    ax2.axhline(0, color=MUTED, linewidth=0.8)
+    ax2.set_xlabel("2010 年の家族関連公的支出（GDP 比 %）　橙 = 北欧、緑 = 韓国・日本")
+    ax2.set_ylabel("TFR の変化（2010 → 2021 年）")
+    ax2.set_title("手厚い国ほど持ちこたえた、という関係はない", fontsize=10.5, loc="left")
+    _style(ax2)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    _save(fig, path, SRC_SOCX)
+
+
+def fig17_census(g: pl.DataFrame, path: Path) -> None:
+    plt = _plt()
+    fig, axes = plt.subplots(1, 2, figsize=(11, 6.6))
+    for ax, sex, title in zip(axes, ("M", "F"), ("男性", "女性"), strict=True):
+        sub = g.filter(pl.col("sex") == sex).sort("b")
+        ys = list(range(sub.height))
+        for yi, r in zip(ys, sub.iter_rows(named=True), strict=True):
+            color = (
+                ORANGE if r["iso3"] in h5.NORDIC5 else (GREEN if r["iso3"] in h5.SOUTH else BLUE)
+            )
+            ax.plot([r["lo"], r["hi"]], [yi, yi], color=color, linewidth=1.6)
+            ax.plot([r["b"]], [yi], "o", color=color, markersize=4)
+        ax.set_yticks(ys)
+        ax.set_yticklabels(
+            [EU_NAMES_JA.get(c, c) for c in sub["iso3"].to_list()], fontsize=7.5, color=INK
+        )
+        ax.axvline(0, color=MUTED, linewidth=0.8)
+        ax.set_title(
+            f"{title}: 学歴が 1 段階上がると有配偶率は何ポイント違うか", fontsize=10, loc="left"
+        )
+        ax.set_xlabel("年齢をそろえた学歴勾配（95% 信頼区間）")
+        _style(ax)
+        ax.grid(axis="y", visible=False)
+        ax.grid(axis="x", color="#e5e5e5", linewidth=0.6)
+    fig.suptitle(
+        "欧州 31 か国の 2021 年センサス: 25–59 歳、法律婚のみ。橙 = 北欧、緑 = 南欧",
+        fontsize=10.5,
+        x=0.01,
+        ha="left",
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 0.95))
+    _save(fig, path, SRC_EUROSTAT)
+
+
+def fig18_orders_korea(dec: dict[str, dict[str, float]], kr: pl.DataFrame, path: Path) -> None:
+    plt = _plt()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.6))
+    isos = [i for i in ("FIN", "SWE", "NOR", "ISL", "NLD", "ESP", "ITA", "POL") if i in dec]
+    pos = np.zeros(len(isos))
+    neg = np.zeros(len(isos))
+    for o, color, lab in (
+        ("1", BLUE_RAMP[4], "第 1 子"),
+        ("2", BLUE_RAMP[3], "第 2 子"),
+        ("3", BLUE_RAMP[2], "第 3 子"),
+        ("GE4", BLUE_RAMP[0], "第 4 子以上"),
+    ):
+        vals = np.array([dec[i][f"d_{o}"] for i in isos])
+        base = np.where(vals >= 0, pos, neg)
+        ax1.bar(
+            [EU_NAMES_JA.get(i, i) for i in isos],
+            vals,
+            bottom=base,
+            color=color,
+            label=lab,
+            width=0.7,
+        )
+        pos = pos + np.where(vals >= 0, vals, 0)
+        neg = neg + np.where(vals < 0, vals, 0)
+    for i, iso3 in enumerate(isos):
+        ax1.annotate(
+            f"{dec[iso3]['first_share']:.0%}",
+            (i, neg[i]),
+            fontsize=7.5,
+            color=INK,
+            ha="center",
+            va="top",
+            xytext=(0, -2),
+            textcoords="offset points",
+        )
+    ax1.axhline(0, color=MUTED, linewidth=0.8)
+    ax1.tick_params(axis="x", labelsize=8, rotation=25)
+    ax1.set_ylim(min(neg) - 0.12, max(0.08, max(pos) + 0.02))
+    ax1.set_ylabel("出生順位別 TFR の変化（2010 → 2024 年）")
+    ax1.set_title(
+        "北欧の低下は第 1 子だけではない（数字 = 第 1 子の寄与率）", fontsize=10.5, loc="left"
+    )
+    ax1.legend(frameon=False, fontsize=8, ncol=2, loc="lower right")
+    _style(ax1)
+    years = sorted(kr["ref_year"].unique().to_list())
+    for yr, color in zip(years, BLUE_RAMP * 3, strict=False):
+        sub = kr.filter(
+            (pl.col("ref_year") == yr)
+            & (pl.col("metric") == "with_children_share")
+            & (pl.col("income_class") != "total")
+            & (pl.col("income_concept") == "earned_business")
+        ).sort("income_lower_10k_krw")
+        mids = [
+            float(m)
+            for m in (
+                h5.krw_midpoint(lo, hi)
+                for lo, hi in zip(
+                    sub["income_lower_10k_krw"].to_list(),
+                    sub["income_upper_10k_krw"].to_list(),
+                    strict=True,
+                )
+            )
+            if m is not None
+        ]
+        ax2.plot(
+            mids, sub["value"].to_list(), marker="o", color=color, linewidth=1.6, label=str(yr)
+        )
+    ax2.set_xscale("log")
+    ax2.set_xticks([500, 2000, 4000, 6000, 8500, 15000])
+    ax2.set_xticklabels(
+        ["<1千万", "1–3千万", "3–5千万", "5–7千万", "7千万–1億", "1億以上"], fontsize=8, rotation=20
+    )
+    ax2.minorticks_off()
+    ax2.set_xlabel("夫婦合算の年間所得（ウォン、勤労＋事業所得）")
+    ax2.set_ylabel("子どもがいる夫婦の割合")
+    ax2.set_title(
+        "韓国: 新婚 5 年以内の初婚夫婦では、所得が高いほど子どもがいない", fontsize=10.5, loc="left"
+    )
+    ax2.legend(frameon=False, fontsize=7, title="基準年", title_fontsize=7, ncol=2)
+    _style(ax2)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    _save(fig, path, SRC_ORDERS_KOSTAT)
+
+
 def run(data_dir: Path, fig_dir: Path) -> None:
     font = setup_matplotlib()
     print(f"font={font}")
@@ -1213,6 +1395,30 @@ def run(data_dir: Path, fig_dir: Path) -> None:
     japan_ln_gdp = math.log(float(jpn["gdp_pcap_ppp"][0]))
     print(f"  Japan 2022 ln_gdp={japan_ln_gdp:.3f}")
     fig15_dhs_quintiles(prof, merged, pooled, japan_ln_gdp, fig_dir / "s15_dhs_quintiles.png")
+
+    # H5 recomputed: policy × TFR (a), census gradients (b), birth-order decomposition (c1), Korea
+    spend = pl.read_parquet(data_dir / SPEND_MART)
+    pframe = h5.policy_frame(panel, spend)
+    print(f"== H5 policy sample: n={pframe.height} countries={pframe['iso3'].n_unique()} ==")
+    pres = h5.block_a1(pframe, "S")
+    d, _ = h5.block_a2(pframe, h5.BASE_YEAR, h5.END_YEAR, "S")
+    fig16_policy(pres, d, fig_dir / "s16_policy_vs_tfr.png")
+    census = pl.read_parquet(data_dir / CENSUS_MART)
+    g = h5.census_gradients(census)
+    h5.print_gradients(g, "summary")
+    fig17_census(g, fig_dir / "s17_census_gradients.png")
+    orders = pl.read_parquet(data_dir / ORDER_MART)
+    order_dec: dict[str, dict[str, float]] = {}
+    for iso3 in sorted(orders["iso3"].unique().to_list()):
+        od = h5.order_decomposition(orders, iso3, h5.BASE_YEAR)
+        if od is not None:
+            order_dec[iso3] = od
+            print(f"  {iso3}: d_known={od['d_known']:+.3f} first_share={od['first_share']:.2f}")
+    kr = pl.read_parquet(data_dir / KR_MART)
+    for yr in sorted(kr["ref_year"].unique().to_list()):
+        c, _n = h5.korea_slope(kr, yr)
+        print(f"  KR {yr}: {c.fmt()}")
+    fig18_orders_korea(order_dec, kr, fig_dir / "s18_birth_order_korea.png")
 
 
 def main() -> None:
